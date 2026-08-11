@@ -1,0 +1,8 @@
+# Feature 1: User Identity & Data Foundation
+fastapi
+uvicorn[standard]
+prisma
+pydantic-settings
+pytest
+pytest-asyncio
+httpx

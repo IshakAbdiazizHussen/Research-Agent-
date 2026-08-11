@@ -1,0 +1,116 @@
+// Feature 1: User Identity & Data Foundation
+// Models per docs/architecture.md — field names are Prisma-idiomatic camelCase
+// throughout (see docs/constraints.md sign-off policy: schema changes require
+// explicit sign-off before being altered).
+
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Enums -------------------------------------------------------------
+
+enum MessageRole {
+  user
+  assistant
+  system
+  tool
+}
+
+// Mirrors the LangGraph node names a run passes through (docs/architecture.md,
+// docs/constraints.md retry-cap section). "pending" = row created, graph not
+// yet started; "completed"/"failed" are terminal.
+enum RunStatus {
+  pending
+  retrieving
+  grading
+  rewriting
+  synthesizing
+  completed
+  failed
+}
+
+// --- Models --------------------------------------------------------------
+
+// An external product customer (docs/project_definition.md, Step 4 / Section 3).
+// No roles/permissions field in v1 — out of scope per project_definition.md.
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  researchRuns ResearchRun[]
+
+  @@map("users")
+}
+
+// One research query -> one agentic run (docs/project_definition.md, Step 6).
+model ResearchRun {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  query       String
+  status      RunStatus @default(pending)
+  // Current count through the grader -> rewriter -> retriever loop; capped at
+  // 3 per docs/constraints.md (enforced in the graph, Feature 2 — not here).
+  retryCount  Int       @default(0)
+  answer      String?
+  // List of {url, title, snippet} used in the final answer.
+  sources     Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  messages    Message[]
+  checkpoints Checkpoint[]
+
+  @@index([userId])
+  @@map("research_runs")
+}
+
+// A single entry in a run's transcript (docs/architecture.md).
+model Message {
+  id    String      @id @default(uuid())
+  runId String
+  run   ResearchRun @relation(fields: [runId], references: [id])
+
+  role    MessageRole
+  content String
+  // e.g. "retrieving" / "grading" / "synthesizing" — drives
+  // frontend/components/chat/StreamingStatus.tsx. Null for plain
+  // user/assistant messages that aren't a progress update.
+  stepType String?
+  // Ordering within the run; createdAt also present for display/audit but
+  // sequence is authoritative for transcript order (docs/architecture.md).
+  sequence  Int
+  createdAt DateTime @default(now())
+
+  @@index([runId, sequence])
+  @@map("messages")
+}
+
+// Backs LangGraph's Postgres checkpointer (docs/architecture.md). threadId
+// maps to LangGraph's own thread_id, which Feature 4 sets to ResearchRun.id
+// at the config layer — named threadId (not runId) deliberately, to match
+// LangGraph's checkpoint vocabulary rather than this schema's usual runId
+// convention (see Message.runId, docs/architecture.md decision log).
+model Checkpoint {
+  id       String      @id @default(uuid())
+  threadId String
+  run      ResearchRun @relation(fields: [threadId], references: [id])
+
+  checkpointData     Json
+  parentCheckpointId String?
+  createdAt          DateTime @default(now())
+
+  @@index([threadId])
+  @@map("checkpoints")
+}
