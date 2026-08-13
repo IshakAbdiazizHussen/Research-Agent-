@@ -4,6 +4,28 @@ Features are derived from the problem breakdown in `project_definition.md`
 and ordered by dependency — each feature builds on artifacts the previous
 ones created.
 
+## Quality Assurance template
+
+Every feature's **Quality Assurance** section must include explicit
+lint/build/test commands appropriate to what that feature touches, not
+just a "tests pass" statement:
+
+- **Backend/Python features:** `ruff check .` (lint), `mypy .` if
+  type-checking is in use, and `pytest` (tests) — all run from `backend/`,
+  all must pass with zero errors before the feature is considered done.
+  (`mypy` is not currently configured/in use in this codebase — no
+  `mypy.ini`, not enforced anywhere — so it's omitted from features below
+  until/unless that changes; the template line stays conditional for when
+  it does.)
+- **Frontend/Next.js features (starting Feature 6):** `npm run lint`,
+  `npm run build`, and `npm run test` if a test runner is configured — all
+  run from `frontend/`, all must pass before the feature is considered
+  done.
+- **Don't cross the streams:** a backend-only feature's QA section does not
+  need the `npm` commands, and a frontend-only feature's QA section does
+  not need `ruff`/`mypy`/`pytest`. Only include commands relevant to what
+  that specific feature actually touches.
+
 ---
 
 ## Feature 1: User Identity & Data Foundation
@@ -53,6 +75,10 @@ credentials — they come from `core/config.py` reading environment variables.
    documented as such) used by later routes.
 
 ### Quality Assurance
+- Backend feature — from `backend/`, run `ruff check .` and `pytest`; both
+  must pass with zero errors (`mypy` omitted — not configured/in use in
+  this codebase; no `npm` commands — this feature touches no frontend
+  code).
 - Migration applies cleanly to a fresh database.
 - A `User` and a `ResearchRun` row can be created and read back via the
   Prisma client in a standalone script/test.
@@ -153,7 +179,9 @@ re-typed in the node.
 1. Define `agent/state.py`: `query`, `search_query`, `retrieved_docs`,
    `graded_docs`, `retry_count`, `answer`, `sources`, `status`.
 2. Implement `tools/base.py` (tool interface: `name`, `run(input) -> output`)
-   and `tools/web_search.py` (concrete web search tool implementation).
+   and `tools/web_search_openai.py` (concrete web search tool implementation
+   — see `architecture.md`'s decision log for why this is OpenAI's
+   `web_search` rather than a raw-result search API).
 3. Implement `agent/nodes/retriever.py`, `grader.py`, `rewriter.py`,
    `synthesizer.py` using the prompts above.
 4. Wire `agent/graph.py`: `StateGraph` with conditional edge after
@@ -164,6 +192,10 @@ re-typed in the node.
    directly (no HTTP layer yet — that's Feature 4).
 
 ### Quality Assurance
+- Backend feature — from `backend/`, run `ruff check .` and `pytest`; both
+  must pass with zero errors (`mypy` omitted — not configured/in use in
+  this codebase; no `npm` commands — this feature touches no frontend
+  code).
 - `backend/tests/test_agent_graph.py` runs the graph directly (no HTTP)
   against a handful of hand-picked queries and asserts: an answer is
   produced, sources are non-empty, and `retry_count` never exceeds 3.
@@ -208,13 +240,17 @@ architecture's stated boundary. TTLs are the named constants from
    `get_cached(key)` / `set_cached(key, value, ttl)`, with try/except around
    all Redis operations that falls back to "miss" behavior on any error.
 2. Add a `retrieval:{query_hash}` cache check/set around the web search
-   tool call in `tools/web_search.py`.
+   tool call in `tools/web_search_openai.py`.
 3. Add an `llm:{prompt_hash}` cache check/set around each LLM call in
    `grader.py`, `rewriter.py`, `synthesizer.py`.
 4. Confirm cache hits skip the live call entirely and cache misses/failures
    fall through to a live call transparently.
 
 ### Quality Assurance
+- Backend feature — from `backend/`, run `ruff check .` and `pytest`; both
+  must pass with zero errors (`mypy` omitted — not configured/in use in
+  this codebase; no `npm` commands — this feature touches no frontend
+  code).
 - Unit test: same query run twice in immediate succession results in only
   one live web-search call (second is a cache hit).
 - Unit test: simulated Redis connection failure still returns a correct
@@ -271,6 +307,10 @@ in-memory checkpointer, so runs survive a process restart.
 5. Add ownership checks (`userId` match) to both endpoints.
 
 ### Quality Assurance
+- Backend feature — from `backend/`, run `ruff check .` and `pytest`; both
+  must pass with zero errors (`mypy` omitted — not configured/in use in
+  this codebase; no `npm` commands — this feature touches no frontend
+  code).
 - Integration test: `POST /research` followed by consuming
   `GET /research/{id}/stream` yields status events in the expected order
   and ends with a completed answer.
@@ -340,6 +380,10 @@ store implementation files themselves.
    API response when a new run starts.
 
 ### Quality Assurance
+- Backend feature — from `backend/`, run `ruff check .` and `pytest`; both
+  must pass with zero errors (`mypy` omitted — not configured/in use in
+  this codebase; no `npm` commands — this feature touches no frontend
+  code).
 - Unit test: storing then searching returns the stored entry for a
   semantically similar query, and never returns another user's entry.
 - Unit test: swapping the configured backend from in-memory to a stub
@@ -392,6 +436,9 @@ components.
    working research flow.
 
 ### Quality Assurance
+- Frontend feature — from `frontend/`, run `npm run lint`, `npm run build`,
+  and `npm run test` if a test runner is configured; all must pass (no
+  `ruff`/`mypy`/`pytest` — this feature touches no backend code).
 - Manual test: submit a query, observe each streaming status render in
   order, see a final answer with clickable numbered sources.
 - Manual test: kill the backend mid-stream and confirm the UI shows a
@@ -453,6 +500,10 @@ isolated from API/auth concerns.
    be re-run after any node/prompt change.
 
 ### Quality Assurance
+- Backend feature — from `backend/`, run `ruff check .` and `pytest`; both
+  must pass with zero errors (`mypy` omitted — not configured/in use in
+  this codebase; no `npm` commands — this feature touches no frontend
+  code).
 - The eval runner itself is tested against a tiny fixed fixture (2-3
   questions with known expected outcomes) to confirm scoring logic is
   correct before trusting it on the full eval set.

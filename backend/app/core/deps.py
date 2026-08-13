@@ -14,10 +14,10 @@ it is not a substitute for real auth.
 import logging
 
 from fastapi import Depends, Header, HTTPException
+from prisma.models import User
 
 from app.core.config import Settings, get_settings
 from app.db.prisma_client import prisma
-from prisma.models import User
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,9 @@
-"""Environment-driven settings (Feature 1: User Identity & Data Foundation).
+"""Environment-driven settings (Feature 1: User Identity & Data Foundation;
+extended in Feature 2 for the LLM/web-search providers).
 
 Every value here comes from the environment (or a local .env file) — nothing
-downstream should hardcode a database URL, Redis URL, or credential.
-See docs/architecture.md (core/config.py) and docs/constraints.md.
+downstream should hardcode a database URL, Redis URL, credential, or model
+name. See docs/architecture.md (core/config.py) and docs/constraints.md.
 """
 
 from functools import lru_cache
@@ -26,6 +27,13 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     environment: str = "development"
+
+    # LLM provider (Feature 2: grader/rewriter/synthesizer nodes). Required —
+    # picked and approved via user sign-off per docs/constraints.md ("any new
+    # paid API or third-party service"). Model name is configurable, not
+    # hardcoded in any node, so it can be tuned without a code change.
+    openai_api_key: str
+    openai_model: str = "gpt-4o-mini"
 
     @property
     def is_production(self) -> bool:

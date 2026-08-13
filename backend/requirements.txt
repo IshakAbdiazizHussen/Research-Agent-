@@ -6,3 +6,13 @@ pydantic-settings
 pytest
 pytest-asyncio
 httpx
+
+# Feature 2: Core Research Agent Graph
+langgraph
+openai
+
+# Feature 3: Retrieval & LLM Result Caching
+redis
+
+# Dev tooling (lint/QA — see docs/development_plan.md's QA template)
+ruff

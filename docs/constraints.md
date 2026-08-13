@@ -61,6 +61,21 @@ system-wide daily ceiling below is a fixed safety trip-wire, not a tunable:
 | Per query (one `ResearchRun`) | ≤ 1 (grader) × documents-per-retrieval-batch, + ≤ 3 (rewriter, bounded by retry cap) + 1 (synthesizer) — bounded overall by the retry cap above, not separately capped | ≤ 1 per completed run (the long-term-memory run-summary embedding, Feature 5) |
 | Per day, per customer | No hard cap proposed in v1 given the enterprise/quality-first budget context; add a soft rate-limit (e.g. flag accounts exceeding an unusually high run count per day) rather than blocking, until real usage data justifies a hard number | Same |
 
+**Web search tool cost (OpenAI `web_search`, the active default per
+`architecture.md`'s decision log):** not an LLM-completion call in the
+usual sense, but a real, separately-billed line item the table above
+doesn't capture. The retriever node makes one OpenAI Responses API call
+per retriever invocation — up to `1 + MAX_RETRIES` = 4 per query (`agent/
+graph.py`) — each billed at **$10.00 / 1,000 calls, plus search-content
+tokens at standard model rates** (gpt-4o-mini: $0.15/1M input tokens,
+$0.60/1M output tokens), on top of the grader/rewriter/synthesizer
+chat-completion calls above. This is measured, not estimated: a live test
+run (2 eval queries + 1 manual retry-loop check, 8 web_search calls total)
+cost **≈$0.0855**. At that flat per-call rate, web_search calls alone
+would need roughly 3,000/day to exhaust the $30/day ceiling below — worth
+noting since the $10/1,000-call fee applies per call regardless of query
+length, unlike token-based costs.
+
 **Daily cost ceiling (system-wide, hard stop): $30/day**, combined across
 all LLM and embedding calls, all customers combined (not per-customer, and
 not split into separate LLM/embedding sub-budgets). Once cumulative spend

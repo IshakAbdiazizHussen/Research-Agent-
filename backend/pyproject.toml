@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = [
+    # FastAPI's dependency-injection pattern is `param: T = Depends(...)` —
+    # a function call as a default argument is required and intentional
+    # here, not the mutable-default-argument bug this rule exists to catch.
+    "B008",
+]
