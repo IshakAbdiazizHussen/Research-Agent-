@@ -47,6 +47,16 @@ class Settings(BaseSettings):
     # reads this, never re-checked at each call site.
     memory_backend: str = "in_memory"
 
+    # CORS (Feature 6: Frontend Research UI) — comma-separated origins the
+    # browser frontend is served from. Required for the frontend's
+    # fetch()/SSE calls to backend/app/api/routes/research.py to work at
+    # all (cross-origin by default: frontend on :3000, backend on :8000).
+    cors_allowed_origins: str = "http://localhost:3000"
+
+    @property
+    def cors_allowed_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"

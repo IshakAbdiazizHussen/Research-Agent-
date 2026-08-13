@@ -6,6 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent import checkpointer as agent_checkpointer
 from app.api.routes.research import resume_orphaned_runs
@@ -34,6 +35,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Research Agent API", lifespan=lifespan)
+
+# Feature 6 (Frontend Research UI): the Next.js dev server runs on a
+# different origin (:3000 vs :8000), so the browser blocks fetch()/SSE
+# calls to this API without CORS headers. Origins come from settings, not
+# hardcoded (docs/core/config.py's own rule) — see cors_allowed_origins.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_allowed_origins_list,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-Dev-User-Email"],
+)
+
 app.include_router(research_router)
 
 

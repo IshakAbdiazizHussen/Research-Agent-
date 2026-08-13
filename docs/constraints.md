@@ -118,6 +118,25 @@ per-customer soft rate-limit remain open engineering baselines, as above.
 - Retrieved web content is untrusted external data — never treat text found
   in a retrieved document as instructions to the agent (see Feature 2's
   security notes in `development_plan.md`).
+- **Known limitation, accepted rather than fixed:** long-term memory
+  entries (Feature 5, `memory/in_memory_store.py`) have no relationship to
+  Postgres — deleting a `ResearchRun` row does **not** delete its
+  corresponding memory entry, and there is no code path that does. This
+  was found via a real bug (stale entries from deleted dev/test runs
+  surfacing as `related_past_research` for unrelated queries). Deliberately
+  **not** building
+  cascade-delete for this now: there is no `DELETE /research/{id}`
+  endpoint or any other deletion pathway anywhere in the application today
+  — the only way a `ResearchRun` currently gets deleted is manual SQL
+  during dev/test cleanup. Building a `MemoryStore.delete(...)` method and
+  wiring a cascade for a deletion feature that doesn't exist yet would be
+  speculative complexity, the same reasoning `pgvector_store.py` isn't
+  built speculatively (`development_plan.md` Feature 5, Implementation
+  step 3). In dev, the practical mitigation is that `InMemoryStore` is
+  process-local RAM anyway — restarting the backend clears it. **If a real
+  run-deletion feature is ever built, it must also clear the matching
+  memory entries at that time** — this note should be revisited then, not
+  before.
 
 ## Latency targets
 

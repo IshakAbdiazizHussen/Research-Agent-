@@ -51,6 +51,30 @@ _STREAM_MAX_WAIT_SECONDS = 120
 _RESUME_STALENESS_THRESHOLD = timedelta(hours=1)
 _MAX_RESUME_ATTEMPTS = 3
 
+# Feature 5 memory-store step: a real production failure traced to this
+# (see docs/architecture.md decision log) reproduced as a clean success
+# when retried directly with identical input — evidence of a transient
+# failure (rate limit / network blip), not a deterministic bug. This step
+# had zero retry resilience, so a single transient hiccup permanently lost
+# that memory entry. One retry closes that gap without turning a
+# best-effort step into something that can block/fail the run.
+_MEMORY_STORE_MAX_ATTEMPTS = 2
+_MEMORY_STORE_RETRY_DELAY_SECONDS = 2.0
+
+# Minimum cosine-similarity score for a memory-search result to be worth
+# surfacing as "related past research" at all. Without this, search()
+# unconditionally returns its top-K regardless of how weak the match is —
+# observed in practice returning ~5-41% matches (structurally-similar-but-
+# unrelated short questions, e.g. two different "capital of X" queries) as
+# if they were meaningfully related. 0.3 is a starting default (not
+# calibrated against real eval data yet, same spirit as this project's
+# other starting thresholds, e.g. agent/graph.py's MIN_RELEVANT_DOCS) —
+# tune once real usage data exists. Applied here, at the caller, not inside
+# MemoryStore.search() — "what's worth showing a user" is this route's
+# call, not a storage-backend concern every backend would have to
+# reimplement identically.
+_MIN_RELATED_RESEARCH_SCORE = 0.3
+
 # Strong references to in-flight background runs — asyncio does not
 # guarantee an unreferenced Task won't be garbage-collected mid-run.
 _background_tasks: set[asyncio.Task] = set()
@@ -95,6 +119,41 @@ async def _next_sequence(run_id: str) -> int:
         where={"runId": run_id}, order={"sequence": "desc"}
     )
     return (latest.sequence + 1) if latest else 0
+
+
+async def _store_run_memory(*, user_id: str, run_id: str, query: str, answer: str) -> None:
+    """Generate the run-summary and store it in long-term memory. Best-
+    effort with one retry (see _MEMORY_STORE_MAX_ATTEMPTS above) — a
+    failure here must never fail the run itself, whose actual answer
+    already succeeded, so the final failure is logged, never re-raised."""
+    summary_prompt = _SUMMARY_USER_PROMPT_TEMPLATE.format(query=query, answer=answer)
+
+    for attempt in range(1, _MEMORY_STORE_MAX_ATTEMPTS + 1):
+        try:
+            summary = await complete(_SUMMARY_SYSTEM_PROMPT, summary_prompt)
+            await get_memory_store().store(user_id, summary, {"run_id": run_id, "query": query})
+            return
+        except Exception as exc:
+            if attempt < _MEMORY_STORE_MAX_ATTEMPTS:
+                logger.warning(
+                    "long-term memory store attempt %s/%s failed for run_id=%s: "
+                    "%s: %s — retrying in %.0fs",
+                    attempt,
+                    _MEMORY_STORE_MAX_ATTEMPTS,
+                    run_id,
+                    type(exc).__name__,
+                    exc,
+                    _MEMORY_STORE_RETRY_DELAY_SECONDS,
+                )
+                await asyncio.sleep(_MEMORY_STORE_RETRY_DELAY_SECONDS)
+            else:
+                logger.exception(
+                    "failed to store long-term memory for run_id=%s after %s attempt(s): %s: %s",
+                    run_id,
+                    _MEMORY_STORE_MAX_ATTEMPTS,
+                    type(exc).__name__,
+                    exc,
+                )
 
 
 async def _run_graph_and_persist(run_id: str, query: str, *, resume: bool = False) -> None:
@@ -157,24 +216,10 @@ async def _run_graph_and_persist(run_id: str, query: str, *, resume: bool = Fals
                     )
                     await record("assistant", answer, "completed")
 
-                    # Feature 5: best-effort — a failed summary/embed/store
-                    # must never fail a run whose actual answer already
-                    # succeeded. Own try/except, logged, not re-raised.
                     if run_row is not None:
-                        try:
-                            summary_prompt = _SUMMARY_USER_PROMPT_TEMPLATE.format(
-                                query=query, answer=answer
-                            )
-                            summary = await complete(_SUMMARY_SYSTEM_PROMPT, summary_prompt)
-                            await get_memory_store().store(
-                                run_row.userId,
-                                summary,
-                                {"run_id": run_id, "query": query},
-                            )
-                        except Exception:
-                            logger.exception(
-                                "failed to store long-term memory for run_id=%s", run_id
-                            )
+                        await _store_run_memory(
+                            user_id=run_row.userId, run_id=run_id, query=query, answer=answer
+                        )
     except Exception:
         logger.exception("research run failed: run_id=%s", run_id)
         try:
@@ -309,7 +354,8 @@ async def create_research_run(
     # must never block/fail run creation if memory search errors.
     related: list[MemoryResult] = []
     try:
-        related = await get_memory_store().search(current_user.id, payload.query, top_k=3)
+        candidates = await get_memory_store().search(current_user.id, payload.query, top_k=3)
+        related = [r for r in candidates if r["score"] >= _MIN_RELATED_RESEARCH_SCORE]
     except Exception:
         logger.exception("failed to search long-term memory for user_id=%s", current_user.id)
 
