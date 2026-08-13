@@ -1,10 +1,11 @@
-"""LangGraph StateGraph wiring (Feature 2: Core Research Agent Graph).
+"""LangGraph StateGraph wiring (Feature 2: Core Research Agent Graph; Postgres
+checkpointer wired in by Feature 4).
 
 retrieve -> grade -> (enough relevant docs? synthesize : rewrite -> retrieve,
-bounded) -> synthesize. No Postgres checkpointer is wired up here — that's
-Feature 4's job (docs/development_plan.md); this graph runs standalone,
-in-memory, invoked directly (no HTTP layer yet).
+bounded) -> synthesize.
 """
+
+from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
@@ -35,7 +36,11 @@ def _route_after_grading(state: AgentState) -> str:
     return "rewriter"
 
 
-def build_graph():
+def build_graph(checkpointer: Any = None):
+    """checkpointer=None (default): ephemeral, in-memory run — used by
+    tests/test_agent_graph.py and the Feature 2/3 throwaway dev endpoint.
+    Feature 4's real API route passes a connected AsyncPostgresSaver (see
+    agent/checkpointer.py) so runs survive a process restart."""
     graph = StateGraph(AgentState)
 
     graph.add_node("retriever", retriever_node)
@@ -53,15 +58,13 @@ def build_graph():
     graph.add_edge("rewriter", "retriever")
     graph.add_edge("synthesizer", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)
 
 
-async def run_research(query: str) -> AgentState:
-    """Convenience entrypoint: build the graph and run it end-to-end for one
-    query. Used directly by tests/test_agent_graph.py (Feature 2) and, later,
-    by Feature 4's API route."""
-    app = build_graph()
-    initial_state: AgentState = {
+def initial_state(query: str) -> AgentState:
+    """The AgentState every new run/thread starts from — shared by
+    run_research() below and Feature 4's API route so the two never drift."""
+    return {
         "query": query,
         "search_query": "",
         "retrieved_docs": [],
@@ -71,4 +74,12 @@ async def run_research(query: str) -> AgentState:
         "sources": [],
         "status": "pending",
     }
-    return await app.ainvoke(initial_state)
+
+
+async def run_research(query: str) -> AgentState:
+    """Convenience entrypoint: build an ephemeral (no checkpointer) graph and
+    run it end-to-end for one query. Used by tests/test_agent_graph.py and
+    the Feature 2/3 throwaway /dev/test-research endpoint — not by Feature
+    4's real API route, which needs the checkpointed graph instead."""
+    app = build_graph()
+    return await app.ainvoke(initial_state(query))

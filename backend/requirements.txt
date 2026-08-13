@@ -14,5 +14,10 @@ openai
 # Feature 3: Retrieval & LLM Result Caching
 redis
 
+# Feature 4: Research Run API & Streaming Progress
+langgraph-checkpoint-postgres
+psycopg[binary,pool]
+sse-starlette
+
 # Dev tooling (lint/QA — see docs/development_plan.md's QA template)
 ruff
