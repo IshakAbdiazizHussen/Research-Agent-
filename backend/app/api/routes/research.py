@@ -15,7 +15,7 @@ it calls into agent/graph.py and the Prisma client, no business logic here.
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,8 +26,10 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.agent.checkpointer import get_checkpointer
 from app.agent.graph import build_graph, initial_state
+from app.agent.llm_client import complete
 from app.core.deps import get_current_user
 from app.db.prisma_client import prisma
+from app.memory.base import MemoryResult, get_memory_store
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +39,32 @@ _TERMINAL_STATUSES = {"completed", "failed"}
 _STREAM_POLL_SECONDS = 0.3
 _STREAM_MAX_WAIT_SECONDS = 120
 
+# Guards for resume_orphaned_runs() (Feature 4 bug fix — see docs/
+# architecture.md decision log): a non-terminal run with no recent activity
+# is almost certainly abandoned, not legitimately paused, and re-attempting
+# it forever (e.g. once per pytest session, each firing real API calls) is
+# a real cost leak, not a resumability feature. No schema change was made
+# to track this — "recent activity" reuses Message.createdAt (already
+# exists), and "attempt count" is tracked as ordinary Message rows
+# (stepType="resume_attempt") rather than a new ResearchRun column, per
+# docs/constraints.md's sign-off requirement for schema changes.
+_RESUME_STALENESS_THRESHOLD = timedelta(hours=1)
+_MAX_RESUME_ATTEMPTS = 3
+
 # Strong references to in-flight background runs — asyncio does not
 # guarantee an unreferenced Task won't be garbage-collected mid-run.
 _background_tasks: set[asyncio.Task] = set()
+
+# Feature 5 (Long-Term Memory) run-summary prompt — verbatim from
+# docs/development_plan.md; do not edit here without updating that doc.
+_SUMMARY_SYSTEM_PROMPT = """Summarize the following research question and answer in 2-3
+sentences, suitable for later semantic search. Preserve the key entities
+and conclusion; omit filler."""
+
+_SUMMARY_USER_PROMPT_TEMPLATE = """Question: {query}
+Answer: {answer}
+
+Summary:"""
 
 
 class ResearchRequest(BaseModel):
@@ -48,6 +73,9 @@ class ResearchRequest(BaseModel):
 
 class ResearchRunCreated(BaseModel):
     id: str
+    # Feature 5, optional per docs/development_plan.md ("Optionally surface
+    # search() results"). Empty for a customer's first-ever run.
+    related_past_research: list[MemoryResult] = []
 
 
 def _describe_step(node_name: str, update: dict[str, Any]) -> str:
@@ -128,6 +156,25 @@ async def _run_graph_and_persist(run_id: str, query: str, *, resume: bool = Fals
                         },
                     )
                     await record("assistant", answer, "completed")
+
+                    # Feature 5: best-effort — a failed summary/embed/store
+                    # must never fail a run whose actual answer already
+                    # succeeded. Own try/except, logged, not re-raised.
+                    if run_row is not None:
+                        try:
+                            summary_prompt = _SUMMARY_USER_PROMPT_TEMPLATE.format(
+                                query=query, answer=answer
+                            )
+                            summary = await complete(_SUMMARY_SYSTEM_PROMPT, summary_prompt)
+                            await get_memory_store().store(
+                                run_row.userId,
+                                summary,
+                                {"run_id": run_id, "query": query},
+                            )
+                        except Exception:
+                            logger.exception(
+                                "failed to store long-term memory for run_id=%s", run_id
+                            )
     except Exception:
         logger.exception("research run failed: run_id=%s", run_id)
         try:
@@ -150,18 +197,93 @@ def _spawn_run(run_id: str, query: str, *, resume: bool = False) -> None:
     task.add_done_callback(_background_tasks.discard)
 
 
+def _as_utc(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+async def _abandon_run(run_id: str, reason: str) -> None:
+    """Mark a run terminal without attempting to resume it. Uses the
+    existing `failed` status rather than a new "abandoned" enum value —
+    adding one would be a schema.prisma change requiring sign-off per
+    docs/constraints.md, which this fix intentionally avoids."""
+    logger.warning("abandoning orphaned run, not resuming: run_id=%s reason=%s", run_id, reason)
+    await prisma.researchrun.update(
+        where={"id": run_id},
+        data={"status": "failed", "completedAt": datetime.now(UTC)},
+    )
+    seq = await _next_sequence(run_id)
+    await prisma.message.create(
+        data={
+            "runId": run_id,
+            "role": "assistant",
+            "content": "This research run was abandoned (stuck too long or too many failed "
+            "resume attempts) and could not be completed. Please try again.",
+            "stepType": "failed",
+            "sequence": seq,
+        }
+    )
+
+
 async def resume_orphaned_runs() -> None:
     """Called once at app startup (after the checkpointer connects) — any
     run left in a non-terminal status from before a restart/crash has no
     background task tracking it anymore. Resume it from its last checkpoint
     (docs/development_plan.md QA: "confirm the checkpoint allows the run to
-    resume"); if resuming itself fails, _run_graph_and_persist's own
-    try/except still lands it on status=failed rather than stuck forever."""
+    resume") — but only if it looks legitimately interrupted, not abandoned:
+
+    - Stale: its most recent Message is older than
+      _RESUME_STALENESS_THRESHOLD (default 1h). A run that's had zero
+      progress in that long was not "just restarted", it's dead.
+    - Attempted too many times already: _MAX_RESUME_ATTEMPTS
+      resume_attempt markers already exist for it. Without this, a run
+      that reliably fails to resume gets retried once per app/test startup
+      forever — a real, silent, recurring cost leak (this is exactly what
+      happened before this fix: a stuck run from Feature 4 testing was
+      re-attempted, and a real API call fired, on every subsequent pytest
+      run for hours).
+
+    Either condition lands the run on status=failed via _abandon_run()
+    instead of spawning a resume task."""
     orphaned = await prisma.researchrun.find_many(
         where={"status": {"in": ["pending", "retrieving", "grading", "rewriting", "synthesizing"]}}
     )
+    now = datetime.now(UTC)
+
     for run in orphaned:
-        logger.warning("resuming orphaned research run after restart: run_id=%s", run.id)
+        latest_message = await prisma.message.find_first(
+            where={"runId": run.id}, order={"sequence": "desc"}
+        )
+        raw_last_activity = latest_message.createdAt if latest_message else run.createdAt
+        last_activity = _as_utc(raw_last_activity)
+        age = now - last_activity
+
+        attempt_count = await prisma.message.count(
+            where={"runId": run.id, "stepType": "resume_attempt"}
+        )
+
+        if age > _RESUME_STALENESS_THRESHOLD:
+            await _abandon_run(run.id, f"stale, last activity {age} ago")
+            continue
+        if attempt_count >= _MAX_RESUME_ATTEMPTS:
+            await _abandon_run(run.id, f"exceeded max resume attempts ({attempt_count})")
+            continue
+
+        logger.warning(
+            "resuming orphaned research run after restart: run_id=%s (attempt %s/%s)",
+            run.id,
+            attempt_count + 1,
+            _MAX_RESUME_ATTEMPTS,
+        )
+        seq = await _next_sequence(run.id)
+        await prisma.message.create(
+            data={
+                "runId": run.id,
+                "role": "system",
+                "content": f"Resume attempt {attempt_count + 1}/{_MAX_RESUME_ATTEMPTS}.",
+                "stepType": "resume_attempt",
+                "sequence": seq,
+            }
+        )
         _spawn_run(run.id, run.query, resume=True)
 
 
@@ -183,7 +305,15 @@ async def create_research_run(
 
     _spawn_run(run.id, payload.query)
 
-    return ResearchRunCreated(id=run.id)
+    # Feature 5, optional and best-effort: surfacing related past research
+    # must never block/fail run creation if memory search errors.
+    related: list[MemoryResult] = []
+    try:
+        related = await get_memory_store().search(current_user.id, payload.query, top_k=3)
+    except Exception:
+        logger.exception("failed to search long-term memory for user_id=%s", current_user.id)
+
+    return ResearchRunCreated(id=run.id, related_past_research=related)
 
 
 @router.get("/research/{run_id}/stream")

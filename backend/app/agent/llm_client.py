@@ -13,6 +13,12 @@ the one place every LLM call from all three nodes actually goes through,
 so it's the correct place to cache once instead of three times (matches
 this feature's own Guidelines: TTLs/keys defined once, not re-typed per
 call site). No node needed to change.
+
+Feature 5 (Long-Term Memory) adds `embed()` here too, reusing the same
+shared client — not a new provider, same OpenAI account/key. Uncached
+(unlike `complete()`): each embedded summary is essentially unique text, so
+there's little cache-hit value, and Feature 3's caching guidelines only
+scoped `llm:{prompt_hash}` to chat completions.
 """
 
 from openai import AsyncOpenAI
@@ -58,3 +64,16 @@ async def complete(
 
     await set_cached(cache_key, result, LLM_TTL_SECONDS, settings=settings)
     return result
+
+
+async def embed(text: str, *, settings: Settings | None = None) -> list[float]:
+    """Embed `text` with the configured embedding model (never hardcoded in
+    a caller — settings.openai_embedding_model)."""
+    settings = settings or get_settings()
+    client = _get_client(settings)
+
+    response = await client.embeddings.create(
+        model=settings.openai_embedding_model,
+        input=text,
+    )
+    return response.data[0].embedding

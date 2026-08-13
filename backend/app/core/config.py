@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     openai_api_key: str
     openai_model: str = "gpt-4o-mini"
 
+    # Embeddings (Feature 5: Long-Term Memory). Same OpenAI account/key as
+    # above, not a new provider — cost pre-anticipated in docs/constraints.md
+    # ("≤ 1 embedding call per completed run"). Model configurable, same
+    # reasoning as openai_model.
+    openai_embedding_model: str = "text-embedding-3-small"
+
+    # Long-term memory backend (Feature 5). Swappable per the decision log
+    # in docs/architecture.md — "in_memory" is the only implemented value
+    # for v1; memory/base.py's get_memory_store() is the single place that
+    # reads this, never re-checked at each call site.
+    memory_backend: str = "in_memory"
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"

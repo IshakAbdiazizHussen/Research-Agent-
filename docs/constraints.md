@@ -45,7 +45,7 @@ becomes a measured problem.
   tuning knob.
 - If the cap is reached without sufficient relevant documents, the graph
   proceeds to `synthesizer` with whatever was retrieved, and the
-  synthesizer prompt's existing instruction ("if sources are insufficient,
+  synthesizer prompt's existing instruction ("if sources are insufficient, 
   say so explicitly") governs the output — the run must still complete
   rather than hang or error out.
 
