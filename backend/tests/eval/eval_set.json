@@ -1,0 +1,82 @@
+[
+  {
+    "question": "What is the capital of Japan?",
+    "expected_answer": "The capital of Japan is Tokyo."
+  },
+  {
+    "question": "What is the capital of Australia?",
+    "expected_answer": "The capital of Australia is Canberra, not Sydney (a common misconception)."
+  },
+  {
+    "question": "Who wrote the novel '1984'?",
+    "expected_answer": "George Orwell wrote '1984', published in 1949."
+  },
+  {
+    "question": "What year did World War II end?",
+    "expected_answer": "World War II ended in 1945."
+  },
+  {
+    "question": "What is the chemical symbol for gold?",
+    "expected_answer": "The chemical symbol for gold is Au."
+  },
+  {
+    "question": "What is the tallest mountain in the world?",
+    "expected_answer": "Mount Everest, at approximately 8,849 meters (29,032 feet), is the tallest mountain above sea level."
+  },
+  {
+    "question": "Who painted the Mona Lisa?",
+    "expected_answer": "Leonardo da Vinci painted the Mona Lisa."
+  },
+  {
+    "question": "What is the largest planet in our solar system?",
+    "expected_answer": "Jupiter is the largest planet in our solar system."
+  },
+  {
+    "question": "What is the speed of light in a vacuum?",
+    "expected_answer": "The speed of light in a vacuum is approximately 299,792,458 meters per second (about 300,000 km/s)."
+  },
+  {
+    "question": "What is the capital of Canada?",
+    "expected_answer": "The capital of Canada is Ottawa."
+  },
+  {
+    "question": "How does photosynthesis work?",
+    "expected_answer": "Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to produce glucose and oxygen, primarily occurring in chloroplasts using chlorophyll."
+  },
+  {
+    "question": "How do vaccines work?",
+    "expected_answer": "Vaccines expose the immune system to a harmless piece or weakened/inactivated form of a pathogen, prompting the body to produce antibodies and memory cells so it can respond quickly to a future real infection."
+  },
+  {
+    "question": "How does the human immune system fight off viruses?",
+    "expected_answer": "The immune system fights viruses through innate responses (inflammation, interferons) and adaptive responses (T cells and B cells that target and remember specific pathogens)."
+  },
+  {
+    "question": "How do AI agents work?",
+    "expected_answer": "AI agents perceive their environment, process information (often using a language model or decision-making system), and take actions to achieve goals, typically in a loop of observation, reasoning, and action."
+  },
+  {
+    "question": "How does blockchain technology work?",
+    "expected_answer": "Blockchain is a distributed ledger technology where transactions are recorded in blocks that are cryptographically linked and verified across a network of computers, making the record tamper-resistant."
+  },
+  {
+    "question": "What is the difference between a virus and a bacterium?",
+    "expected_answer": "Bacteria are single-celled living organisms that can reproduce independently, while viruses are not fully alive on their own and need to infect a host cell to replicate."
+  },
+  {
+    "question": "What causes earthquakes?",
+    "expected_answer": "Earthquakes are primarily caused by the sudden release of energy from movement along fault lines in the Earth's crust, often due to tectonic plate interactions."
+  },
+  {
+    "question": "What is the boiling point of water at sea level in Celsius?",
+    "expected_answer": "Water boils at 100 degrees Celsius (212°F) at sea level (standard atmospheric pressure)."
+  },
+  {
+    "question": "Who was the first person to walk on the Moon?",
+    "expected_answer": "Neil Armstrong was the first person to walk on the Moon, on July 20, 1969, during the Apollo 11 mission."
+  },
+  {
+    "question": "How does the stock market work?",
+    "expected_answer": "The stock market is a marketplace where shares of publicly traded companies are bought and sold; prices are determined by supply and demand, reflecting investors' expectations about a company's future performance."
+  }
+]
