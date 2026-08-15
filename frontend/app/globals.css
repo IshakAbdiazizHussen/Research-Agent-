@@ -615,7 +615,7 @@ body {
 }
 
 .landing-section-inner {
-  max-width: 1040px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -640,7 +640,13 @@ body {
 .landing-steps,
 .landing-capabilities {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Fixed card width (not 1fr/fluid) — was stretching/shrinking to
+     divide whatever the container's width happened to be, reading as
+     too narrow. 280px is a deliberate, explicit size; justify-content
+     centers the resulting fixed-width row within the wider container
+     above instead of the columns filling 100% of it. */
+  grid-template-columns: repeat(4, 280px);
+  justify-content: center;
   gap: 1.5rem;
 }
 
