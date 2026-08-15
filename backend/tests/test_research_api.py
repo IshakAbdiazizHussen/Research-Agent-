@@ -130,6 +130,11 @@ async def test_post_then_stream_yields_ordered_progress_and_completes(mocked_ope
             await _cleanup(run_ids=[run_id] if run_id else [], user_emails=[email])
 
 
+# TODO(flaky, not yet fixed): this test intermittently fails only when the
+# full suite runs together (psycopg_pool.PoolClosed / "Event loop is
+# closed"), always passes alone. Working hypothesis and candidate fixes:
+# docs/constraints.md, "Known test-suite flakes (not yet fixed)". Don't
+# spend time re-diagnosing this from scratch — read that section first.
 async def test_stream_of_another_users_run_is_not_found(mocked_openai):
     query = f"integration test query {uuid.uuid4()}"
     owner_email = f"owner-{uuid.uuid4()}@test.local"

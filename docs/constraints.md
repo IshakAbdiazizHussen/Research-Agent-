@@ -148,6 +148,51 @@ per-customer soft rate-limit remain open engineering baselines, as above.
 | Full run, worst-case (full 3 retries used) | Under 20 seconds |
 | Cache hit path (retrieval or LLM) | ≤ 200ms added latency over a raw cache read |
 
+## Known test-suite flakes (not yet fixed)
+
+- **Recurring async Postgres pool-lifecycle flake in certain full-suite
+  orderings.** `tests/test_memory.py::test_semantic_search_finds_similar_entry_and_scopes_to_user`
+  and `tests/test_research_api.py::test_stream_of_another_users_run_is_not_found`
+  intermittently fail only when the full `pytest` suite runs together —
+  `psycopg_pool.PoolClosed: the pool '...' is already closed`, or
+  `RuntimeError: Event loop is closed`. Reproduced repeatedly across
+  sessions: which test fails (one, the other, or both) and which exact
+  error appears varies run to run. **Both pass reliably every time in
+  isolation** (alone, or the two of them together, excluded from the rest
+  of the suite) — this is not a defect in either test's own logic, and not
+  something either test file introduced.
+
+  **Working hypothesis, not yet confirmed or fixed:** `agent/checkpointer.py`'s
+  `_pool`/`_saver` (the LangGraph Postgres checkpoint pool) are
+  process-level module globals — opened by `connect()`, closed by
+  `disconnect()` — cycled once per `lifespan(app)` call, and
+  `tests/test_research_api.py`'s integration tests each open and close
+  their own `async with lifespan(app):` block, one per test function.
+  pytest-asyncio's default (function-scoped) event loop gives each test
+  function a *new* loop, and `POST /research` kicks off graph execution via
+  a **detached `asyncio.create_task`** (this file's "Background run
+  execution" choice, `architecture.md` decision log — fire-and-forget, not
+  awaited by the request/response cycle). If that background task is still
+  mid-flight against the pool when its own test's `lifespan(app)` block
+  exits and calls `checkpointer.disconnect()` (closing the pool out from
+  under it), the resulting exception belongs to an unawaited task — it
+  doesn't necessarily surface inside the test that caused it, only whenever
+  asyncio next processes that task's continuation, which can be during a
+  *later* test running under a *different*, unrelated event loop. That
+  would explain both the "sometimes this test, sometimes that one" pattern
+  and the "always passes alone" pattern (no cross-test global-pool race is
+  possible with only one `lifespan(app)` cycle in play at a time).
+
+  Not fixed here — flagging so it stops needing rediscovery each session.
+  If pursued, candidates worth evaluating (not evaluated yet): (a) making
+  the checkpointer pool/saver test-scoped instead of a module-level
+  singleton; (b) having `POST /research`'s background task tracked and
+  awaited/cancelled during `lifespan(app)` shutdown instead of left fully
+  detached; (c) a single session-scoped event loop for the test suite
+  instead of pytest-asyncio's default per-function one. Each is a real
+  design trade-off (not a one-line fix), so deliberately left open rather
+  than guessed at further.
+
 ## What requires sign-off before being built
 
 The following must not be built or changed without your explicit approval

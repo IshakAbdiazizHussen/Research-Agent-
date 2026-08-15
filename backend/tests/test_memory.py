@@ -13,6 +13,12 @@ from typing import Any
 from app.memory.base import MemoryResult, MemoryStore, _set_store_for_testing, get_memory_store
 
 
+# TODO(flaky, not yet fixed): this test intermittently fails only when the
+# full suite runs together (psycopg_pool.PoolClosed / "Event loop is
+# closed") even though it does no Postgres access itself — the error
+# belongs to an unrelated unawaited background task from another test.
+# Working hypothesis and candidate fixes: docs/constraints.md, "Known
+# test-suite flakes (not yet fixed)". Don't re-diagnose from scratch.
 async def test_semantic_search_finds_similar_entry_and_scopes_to_user():
     store = get_memory_store()
     user_a = f"user-a-{uuid.uuid4()}"
