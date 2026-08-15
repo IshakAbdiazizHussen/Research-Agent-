@@ -11,8 +11,8 @@ interface MessageListProps {
   error: string | null;
   /** Live progress steps for the currently in-flight exchange only — a
    * past (history) exchange has no steps to replay, so these default to
-   * "nothing streaming," which renders nothing (StreamingStatus's own
-   * guard), not a special case here. */
+   * "nothing streaming," which renders nothing (see isStreaming gate
+   * below), not a special case here. */
   steps?: ProgressEventData[];
   isStreaming?: boolean;
 }
@@ -34,10 +34,14 @@ export function MessageList({
         <p>{query}</p>
       </Card>
 
-      {/* Sits between the user's bubble and the eventual reply — reads as
-       * "waiting for a reply" while streaming, and as a short process log
-       * once the reply bubble below it has landed. */}
-      <StreamingStatus steps={steps} isStreaming={isStreaming} />
+      {/* Sits between the user's bubble and the eventual reply, and only
+       * while this exchange is actively in-flight — reads as "waiting for
+       * a reply." Once isStreaming flips false (answer or error landed),
+       * the trace unmounts entirely rather than lingering above the reply
+       * bubble forever; a completed history exchange never had
+       * isStreaming=true passed to it in the first place (defaults to
+       * false), so it never shows one either. */}
+      {isStreaming && <StreamingStatus steps={steps} isStreaming={isStreaming} />}
 
       {error && (
         <Card className="message message-error" role="alert">
