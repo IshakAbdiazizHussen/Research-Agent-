@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QueryInput } from "@/components/chat/QueryInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { Card } from "@/components/ui/Card";
@@ -51,9 +51,11 @@ interface Exchange {
 }
 
 export default function HomePage() {
-  // History renders most-recent-first, right below the current exchange —
-  // the input stays fixed at the top of the page, so keeping the newest
-  // result closest to it means never having to scroll after submitting.
+  // Chronological order (oldest first) — the complement of a fixed-bottom
+  // input: new exchanges append to the end, appearing directly above where
+  // the user just typed, not pushing older ones further away. Appending
+  // (not prepending) here means render order is already correct with no
+  // reversal needed at render time.
   const [history, setHistory] = useState<Exchange[]>([]);
 
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
@@ -64,6 +66,17 @@ export default function HomePage() {
   const [isStreaming, setIsStreaming] = useState(false);
 
   const streamRef = useRef<ResearchStreamHandle | null>(null);
+  // Sentinel scrolled into view on every update below — simpler and more
+  // robust than tracking scrollTop/scrollHeight by hand.
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll the chat area to the latest activity — new message
+  // submitted, a streaming step arrives, or the answer/error lands —
+  // same behavior as ChatGPT/most chat apps, so the user never has to
+  // scroll manually to see what just happened.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [history, currentQuery, steps, done, error, isStreaming]);
 
   // Not wrapped in useCallback: archiving the *current* exchange into
   // history on every submit needs the latest currentQuery/done/error, and
@@ -74,7 +87,7 @@ export default function HomePage() {
     streamRef.current?.close();
 
     if (currentQuery !== null) {
-      setHistory((prev) => [{ query: currentQuery, done, error }, ...prev]);
+      setHistory((prev) => [...prev, { query: currentQuery, done, error }]);
     }
 
     setCurrentQuery(query);
@@ -118,35 +131,50 @@ export default function HomePage() {
   }
 
   return (
-    <main className="page">
-      <h1>Research Agent</h1>
-      <p className="page-subtitle">
-        Ask a question — it&apos;s researched live across the web, with cited sources.
-      </p>
+    <div className="chat-shell">
+      <div className="chat-scroll">
+        <main className="page">
+          <h1>Research Agent</h1>
+          <p className="page-subtitle">
+            Ask a question — it&apos;s researched live across the web, with cited sources.
+          </p>
 
-      <QueryInput onSubmit={handleSubmit} disabled={isStreaming} />
+          {history.map((exchange, index) => (
+            <MessageList
+              key={`${index}-${exchange.query}`}
+              query={exchange.query}
+              done={exchange.done}
+              error={exchange.error}
+            />
+          ))}
 
-      {currentQuery && (
-        <>
-          <RelatedPastResearch items={relatedPastResearch} />
-          <MessageList
-            query={currentQuery}
-            done={done}
-            error={error}
-            steps={steps}
-            isStreaming={isStreaming}
-          />
-        </>
-      )}
+          {currentQuery && (
+            <>
+              {/* Inline, right above the exchange it relates to, rather
+               * than pinned near the (now-bottom) input — it's about the
+               * query just submitted, so it reads best sitting in the
+               * scrolling chat flow next to that query, not anchored to
+               * UI chrome that no longer sits near the top. */}
+              <RelatedPastResearch items={relatedPastResearch} />
+              <MessageList
+                query={currentQuery}
+                done={done}
+                error={error}
+                steps={steps}
+                isStreaming={isStreaming}
+              />
+            </>
+          )}
 
-      {history.map((exchange, index) => (
-        <MessageList
-          key={`${history.length - index}-${exchange.query}`}
-          query={exchange.query}
-          done={exchange.done}
-          error={exchange.error}
-        />
-      ))}
-    </main>
+          <div ref={bottomRef} />
+        </main>
+      </div>
+
+      <div className="chat-input-bar">
+        <div className="chat-input-bar-inner">
+          <QueryInput onSubmit={handleSubmit} disabled={isStreaming} />
+        </div>
+      </div>
+    </div>
   );
 }

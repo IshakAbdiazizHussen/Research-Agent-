@@ -14,6 +14,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
@@ -22,10 +27,28 @@ body {
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* ChatGPT-style shell: fixed-height column, input bar pinned at the
+   bottom, chat area fills the rest and scrolls on its own — not the
+   page/body. flex (not position:fixed) so the scroll area's height is
+   exactly "viewport minus input bar," with no magic-number offset to
+   keep in sync if the input bar's height ever changes. */
+.chat-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; /* mobile-safe viewport height; ignored by browsers that don't support dvh */
+}
+
+.chat-scroll {
+  flex: 1;
+  min-height: 0; /* without this, a column flex item won't shrink below its content size, and overflow-y:auto never engages */
+  overflow-y: auto;
+}
+
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
+  padding: 3rem 1.5rem 2rem;
 }
 
 .page h1 {
@@ -38,10 +61,21 @@ body {
   margin-bottom: 2rem;
 }
 
+.chat-input-bar {
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.chat-input-bar-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
 .query-input {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
 }
 
 .query-input input {
