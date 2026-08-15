@@ -634,6 +634,22 @@ by construction, not an oversight to avoid.
   re-measured at 128px/128px. Still a single, deliberate, proportionate
   padding value — not a reintroduction of the removed min-height bug's
   viewport-chasing behavior.
+- "How it works"/"Key capabilities" card width: first widened from fluid
+  `1fr` (too narrow — ~242px, shrinking/growing to divide whatever the
+  container happened to be) to a hard `repeat(4, 280px)`. That was a
+  real, separate bug: a literal fixed size doesn't reflow at all, so it
+  silently **overflowed** the container at any viewport between the
+  ~767px mobile breakpoint and the ~1240px actually needed to fit four
+  280px columns — confirmed by measuring `scrollWidth` vs `clientWidth`
+  across 8 widths (390–1440px) before and after. Fixed with
+  `grid-template-columns: repeat(auto-fit, minmax(240px, 280px))` +
+  `justify-content: center` — same deliberate 280px card width, but the
+  browser now decides how many fit per row at the *current* width and
+  wraps the rest, continuously (1 → 2 → 4 columns as width grows in the
+  retest), zero horizontal overflow at any of the 8 widths tested. The
+  old mobile-only `grid-template-columns: 1fr` override at 767px was
+  removed as redundant — auto-fit collapses to one column under ~767px
+  on its own, without a hard-coded breakpoint.
 - No flash-of-wrong-theme: verified by pre-seeding `localStorage` with a
   non-default theme choice, then inspecting `[data-theme]` and the
   computed body background at `domcontentloaded` (the earliest practical

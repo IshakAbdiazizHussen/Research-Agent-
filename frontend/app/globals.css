@@ -619,6 +619,15 @@ body {
   margin: 0 auto;
 }
 
+/* "How it works" gets a wider container than "Key capabilities" (which
+   stays on the shared 1280px above, untouched) — its cards need more
+   room; see .landing-steps below. Placed after the base rule on purpose:
+   same specificity (one class each), so source order decides the tie —
+   this must come after .landing-section-inner to actually win. */
+.landing-steps-wide {
+  max-width: 1400px;
+}
+
 .landing-section-inner + .landing-section-inner {
   margin-top: 5rem;
 }
@@ -636,18 +645,54 @@ body {
    full, but explicitly calls for the latter to match its visual
    language). Lets the page-length gradient behind it show through
    rather than sitting on an opaque fill, which is what makes it read as
-   "one page" rather than hero-then-a-different-section. */
+   "one page" rather than hero-then-a-different-section.
+
+   Grid behavior (auto-fit + minmax, safe against overflow at any width —
+   see the fixed-vs-fluid history below) is shared; the actual minmax
+   *range* is not — "How it works" needs more room than "Key
+   capabilities" (its titles, e.g. "Agent searches the live web," were
+   wrapping awkwardly at 280px), so each gets its own rule below instead
+   of one shared value. */
 .landing-steps,
 .landing-capabilities {
   display: grid;
-  /* Fixed card width (not 1fr/fluid) — was stretching/shrinking to
-     divide whatever the container's width happened to be, reading as
-     too narrow. 280px is a deliberate, explicit size; justify-content
-     centers the resulting fixed-width row within the wider container
-     above instead of the columns filling 100% of it. */
-  grid-template-columns: repeat(4, 280px);
   justify-content: center;
   gap: 1.5rem;
+}
+
+/* Real fixed card width via minmax(), not a hard repeat(4, 280px) — that
+   was a genuine bug: a literal fixed size doesn't reflow at all, so it
+   silently overflowed the container/viewport at any width between the
+   ~767px mobile breakpoint and the width actually needed for four
+   columns, instead of scaling. auto-fit + minmax(min, max) gives every
+   card the same deliberate width (shrinking below max only if truly
+   needed) while letting the browser decide how many fit per row at the
+   *current* width and wrap the rest — continuous reflow, not a hard
+   breakpoint jump — which is also why there's no mobile-only override
+   anywhere below: this naturally collapses to one column on narrow
+   screens on its own. */
+.landing-capabilities {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 280px));
+}
+
+.landing-steps {
+  /* repeat(4, minmax(0, 1fr)) — deliberately NOT auto-fit here, unlike
+     .landing-capabilities above. Measured via Playwright (not assumed):
+     auto-fit + minmax(300px, 340px) actually rendered only 2 columns at
+     1440px, not 4 — its track-count algorithm doesn't behave the way a
+     min/max range suggests once the max is a fixed length, so it's the
+     wrong tool when "always exactly 4 columns" is a hard requirement.
+     repeat(4, ...) structurally cannot produce fewer than 4 tracks
+     wherever this rule applies; 1fr tracks always sum to exactly the
+     container's width, so this can never overflow either. Paired with
+     the wider .landing-steps-wide (1400px) container above, this gives
+     ~330px/card at 1440px — enough for "Agent searches the live web" /
+     "You get a grounded answer" to fit on one line at their existing,
+     unchanged font-size (verified by screenshot). Below 767px, the
+     mobile media query at the end of this file switches this to a
+     single stacked column — matching this project's one existing
+     breakpoint convention rather than adding a second one. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .landing-step,
@@ -662,6 +707,10 @@ body {
 }
 
 .landing-step {
+  /* More internal breathing room than .landing-capability-card
+     (unchanged) — scoped to "How it works" only, per instruction.
+     Colors/background/border/radius/shadow above stay shared/untouched. */
+  padding: 2rem 1.75rem;
   text-align: center;
 }
 
@@ -734,8 +783,14 @@ body {
     display: inline;
   }
 
-  .landing-steps,
-  .landing-capabilities {
+  /* .landing-capabilities needs no override here — its auto-fit +
+     minmax(240px, 280px) already collapses to one column on narrow
+     screens on its own. .landing-steps DOES need one: repeat(4, 1fr)
+     always produces exactly 4 tracks by construction (that's the whole
+     point of using it over auto-fit above), so without this override
+     it would render 4 very cramped columns on mobile instead of
+     stacking. */
+  .landing-steps {
     grid-template-columns: 1fr;
   }
 

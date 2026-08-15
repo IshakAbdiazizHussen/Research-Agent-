@@ -78,7 +78,7 @@ export default function LandingPage() {
         </section>
 
         <section className="landing-sections">
-          <div className="landing-section-inner">
+          <div className="landing-section-inner landing-steps-wide">
             <h2 className="landing-section-title">How it works</h2>
             <div className="landing-steps">
               {STEPS.map((step, index) => (
