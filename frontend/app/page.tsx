@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { QueryInput } from "@/components/chat/QueryInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { createResearchRun, ApiError } from "@/lib/api";
 import { streamResearch, type ResearchStreamHandle } from "@/lib/sse";
+import { clearHistory, loadHistory, saveHistory, type Exchange } from "@/lib/historyStorage";
 import type { DoneEventData, MemoryResult, ProgressEventData } from "@/types/research";
 
 const GENERIC_START_ERROR = "Could not start this research run. Please try again.";
@@ -40,16 +42,6 @@ function RelatedPastResearch({ items }: { items: MemoryResult[] }) {
   );
 }
 
-/** One finished query/answer exchange, archived into history once a new
- * query is submitted. Deliberately doesn't carry `steps` — the live
- * step-by-step streaming log is only ever shown for the current in-flight
- * query, not replayed for past ones (matches "query/answer exchanges"). */
-interface Exchange {
-  query: string;
-  done: DoneEventData | null;
-  error: string | null;
-}
-
 export default function HomePage() {
   // Chronological order (oldest first) — the complement of a fixed-bottom
   // input: new exchanges append to the end, appearing directly above where
@@ -70,6 +62,20 @@ export default function HomePage() {
   // robust than tracking scrollTop/scrollHeight by hand.
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  // Hydrate persisted history from localStorage once, on mount, client-
+  // side only. Can't read localStorage during Next.js's server-side
+  // render pass (no `window` there — loadHistory() guards for that
+  // itself); doing this inside useState()'s own initializer instead of
+  // an effect would also cause a hydration mismatch (server always
+  // renders starting from [], so the client's very first render must
+  // match that before this runs) — a useEffect fires only after that
+  // first render has already committed, avoiding the mismatch entirely,
+  // at the cost of one effectively-instant extra render once real data
+  // loads.
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
+
   // Auto-scroll the chat area to the latest activity — new message
   // submitted, a streaming step arrives, or the answer/error lands —
   // same behavior as ChatGPT/most chat apps, so the user never has to
@@ -77,6 +83,27 @@ export default function HomePage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [history, currentQuery, steps, done, error, isStreaming]);
+
+  function handleClearHistory() {
+    setHistory([]);
+    clearHistory();
+  }
+
+  // Persists the *current* exchange too, the moment it actually finishes
+  // (guarded below: never while isStreaming, never before done/error has
+  // resolved — a mid-query refresh must still lose it, per spec) —
+  // without this, the single most-recently-completed exchange would be
+  // lost on a refresh even though it's fully done, not in-flight, simply
+  // because the *rendering* split only archives it into `history` state
+  // once the *next* query is submitted (unchanged, see handleSubmit).
+  // This only ever writes to storage, never to `history` state itself —
+  // the current/history rendering split stays exactly as it was; this is
+  // purely about what survives a reload versus what's currently "live."
+  useEffect(() => {
+    if (currentQuery === null || isStreaming) return;
+    if (done === null && error === null) return;
+    saveHistory([...history, { query: currentQuery, done, error }]);
+  }, [history, currentQuery, done, error, isStreaming]);
 
   // Not wrapped in useCallback: archiving the *current* exchange into
   // history on every submit needs the latest currentQuery/done/error, and
@@ -87,7 +114,19 @@ export default function HomePage() {
     streamRef.current?.close();
 
     if (currentQuery !== null) {
-      setHistory((prev) => [...prev, { query: currentQuery, done, error }]);
+      // Persisted explicitly here, alongside the state update, rather
+      // than via a separate useEffect watching `history` — this (and
+      // handleClearHistory above) are the *only* two places `history`
+      // ever changes, so there's no risk of missing a change, and it
+      // sidesteps a real timing hazard an effect-based approach would
+      // have: on mount, the hydration effect above and a naive "save on
+      // every history change" effect would both run in the same commit,
+      // with the save effect still seeing history=[] from that same
+      // render — silently overwriting real stored data with an empty
+      // array before the hydrated value ever got a chance to render.
+      const nextHistory = [...history, { query: currentQuery, done, error }];
+      setHistory(nextHistory);
+      saveHistory(nextHistory);
     }
 
     setCurrentQuery(query);
@@ -134,7 +173,14 @@ export default function HomePage() {
     <div className="chat-shell">
       <div className="chat-scroll">
         <main className="page">
-          <h1>Research Agent</h1>
+          <div className="page-header">
+            <h1>Research Agent</h1>
+            {history.length > 0 && (
+              <Button variant="secondary" className="btn-sm" onClick={handleClearHistory}>
+                Clear chat
+              </Button>
+            )}
+          </div>
           <p className="page-subtitle">
             {/* Two variants, CSS-switched by media query (not JS) — same
              * approach as the rest of this file's responsive behavior,
