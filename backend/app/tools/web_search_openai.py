@@ -99,6 +99,16 @@ class OpenAIWebSearchTool(Tool):
             model=self._settings.openai_model,
             input=input,
             tools=[{"type": "web_search"}],
+            # Forces this specific tool rather than leaving it optional
+            # (the prior default: tool_choice omitted = "auto", model free
+            # to skip search and answer from its own knowledge instead).
+            # Confirmed empirically against the live API — the installed
+            # SDK's ToolChoiceTypesParam type stub only lists
+            # "web_search_preview" as forceable, not "web_search", but
+            # that's a stale/incomplete type; the real API accepts this.
+            # Root cause + eval-measured baseline this addresses: see
+            # docs/architecture.md's "Web search tool" decision log row.
+            tool_choice={"type": "web_search"},
         )
         results = _extract_cited_sources(response)
 
