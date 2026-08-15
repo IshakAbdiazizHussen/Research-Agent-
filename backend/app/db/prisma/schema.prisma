@@ -7,6 +7,11 @@ generator client {
   provider             = "prisma-client-py"
   interface            = "asyncio"
   recursive_type_depth = 5
+  // "native" keeps local dev (macOS) working; "debian-openssl-3.0.x" is the
+  // Linux binary Render's runtime needs — without it, `prisma generate` only
+  // downloads the local platform's engine, and the app fails at startup on
+  // Render with BinaryNotFoundError (architecture.md decision log).
+  binaryTargets         = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
