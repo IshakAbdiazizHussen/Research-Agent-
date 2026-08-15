@@ -52,63 +52,54 @@ const CAPABILITIES = [
 
 export default function LandingPage() {
   return (
-    <>
-      <div className="landing-page">
-        <section className="landing-hero">
-          <div className="landing-hero-toggle">
-            <ThemeToggle />
-          </div>
+    <div className="landing-page">
+      <section className="landing-hero">
+        <div className="landing-hero-toggle">
+          <ThemeToggle />
+        </div>
 
-          <h1 className="landing-headline">
-            Ask a question.
-            <br />
-            Get a cited answer from the live web.
-          </h1>
+        <h1 className="landing-headline">
+          Ask a question.
+          <br />
+          Get a cited answer from the live web.
+        </h1>
 
-          <p className="landing-subhead">
-            No stale training data, no made-up sources — every answer is grounded in real, current
-            pages you can click through and verify.
-          </p>
+        <p className="landing-subhead">
+          No stale training data, no made-up sources — every answer is grounded in real, current
+          pages you can click through and verify.
+        </p>
 
-          <Link href="/app" className="landing-cta">
-            Try it now
-          </Link>
-        </section>
-
-        <section className="landing-sections">
-          <div className="landing-section-inner landing-steps-wide">
-            <h2 className="landing-section-title">How it works</h2>
-            <div className="landing-steps">
-              {STEPS.map((step, index) => (
-                <div className="landing-step" key={step.title}>
-                  <div className="landing-step-number">{index + 1}</div>
-                  <h3 className="landing-step-title">{step.title}</h3>
-                  <p className="landing-step-desc">{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="landing-section-inner">
-            <h2 className="landing-section-title">Key capabilities</h2>
-            <div className="landing-capabilities">
-              {CAPABILITIES.map((capability) => (
-                <div className="landing-capability-card" key={capability.title}>
-                  <h3 className="landing-capability-title">{capability.title}</h3>
-                  <p className="landing-capability-desc">{capability.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer className="landing-footer">
         <Link href="/app" className="landing-cta">
           Try it now
         </Link>
-        <p className="landing-footer-note">Research Agent — ask a question, get a cited answer.</p>
-      </footer>
-    </>
+      </section>
+
+      <section className="landing-sections">
+        <div className="landing-section-inner landing-steps-wide">
+          <h2 className="landing-section-title">How it works</h2>
+          <div className="landing-steps">
+            {STEPS.map((step, index) => (
+              <div className="landing-step" key={step.title}>
+                <div className="landing-step-number">{index + 1}</div>
+                <h3 className="landing-step-title">{step.title}</h3>
+                <p className="landing-step-desc">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="landing-section-inner">
+          <h2 className="landing-section-title">Key capabilities</h2>
+          <div className="landing-capabilities">
+            {CAPABILITIES.map((capability) => (
+              <div className="landing-capability-card" key={capability.title}>
+                <h3 className="landing-capability-title">{capability.title}</h3>
+                <p className="landing-capability-desc">{capability.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

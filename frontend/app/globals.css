@@ -31,19 +31,15 @@
   --color-error-border: #f0b8bf;
   --color-error-text: #a4293a;
   /* Landing page (app/page.tsx) — one continuous gradient spans hero +
-     "How it works" + "Key capabilities" (.landing-page), reaching its
-     deepest tone by the last of those sections; --landing-footer-bg is
-     that same end tone as a flat color, for the final CTA/footer below
-     the fold (not shown in the reference image — this avoids an
-     abrupt seam back to a lighter color at a point with no reference to
-     match against). --card-glass-bg/-border and --badge-bg are the
+     "How it works" + "Key capabilities" (.landing-page), all the way to
+     the bottom of the page — no separate footer section below it
+     anymore. --card-glass-bg/-border and --badge-bg are the
      frosted-glass card treatment "How it works"/"Key capabilities" cards
      share, letting the gradient show through instead of sitting on an
      opaque fill. --toggle-bg is the theme-toggle pill's translucent
      fill. All theme-aware for the same reason everything else here is:
      the toggle affects the ENTIRE app, landing page included. */
   --hero-gradient: linear-gradient(135deg, #eef8ff 0%, #bcdff0 35%, #4fa3d6 70%, #1c7fbe 100%);
-  --landing-footer-bg: #1c7fbe;
   /* Was rgba(255,255,255,0.4) — that read as a near-opaque white card
      floating on top of the blue gradient instead of a frosted tint of
      it. Dropped to 0.16 (border 0.35, kept more visible than the fill
@@ -70,7 +66,6 @@
     --color-error-border: #6b2530;
     --color-error-text: #f2a5ae;
     --hero-gradient: linear-gradient(135deg, #0b0d12 0%, #0f1720 35%, #142a3d 70%, #1a3f5c 100%);
-    --landing-footer-bg: #1a3f5c;
     --card-glass-bg: rgba(255, 255, 255, 0.05);
     --card-glass-border: rgba(255, 255, 255, 0.12);
     --badge-bg: rgba(255, 255, 255, 0.12);
@@ -90,7 +85,6 @@
   --color-error-border: #6b2530;
   --color-error-text: #f2a5ae;
   --hero-gradient: linear-gradient(135deg, #0b0d12 0%, #0f1720 35%, #142a3d 70%, #1a3f5c 100%);
-  --landing-footer-bg: #1a3f5c;
   --card-glass-bg: rgba(255, 255, 255, 0.05);
   --card-glass-border: rgba(255, 255, 255, 0.12);
   --badge-bg: rgba(255, 255, 255, 0.12);
@@ -537,6 +531,20 @@ body {
    feel instead of a hero-height gradient that resets per section. */
 .landing-page {
   background: var(--hero-gradient);
+  /* Floor, not a forced height: on viewports taller than the page's own
+     content (confirmed via measurement — content renders ~1238px tall at
+     1440px width, so any viewport taller than that was affected), the
+     gradient background ended where the content ended and body's flat
+     --color-bg showed through below it as a visible gap. min-height here
+     just guarantees the gradient always covers at least one full
+     viewport; if content is taller, this has no effect and the page
+     grows normally. This is not the same bug as the .landing-hero
+     min-height:100vh removed above — that forced ONE inner section
+     among several to always be full-viewport tall regardless of its own
+     content, creating an internal gap. This is on the outermost page
+     wrapper, as a minimum, not a fixed height. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .landing-hero {
@@ -746,26 +754,6 @@ body {
 
 .landing-capability-title {
   font-size: 1rem;
-}
-
-/* Below the fold — not shown in the reference image, so styled with
-   judgment consistent with the rest of the page rather than matched
-   exactly: a flat continuation of the gradient's own deepest tone
-   (--landing-footer-bg), not the light gradient restarting or an
-   unrelated color, so there's no seam at a point with nothing to match
-   against. Sits outside .landing-page (a flat color, not part of the
-   gradient itself) specifically so its white text/CTA styling doesn't
-   need to vary by how light or dark the gradient happens to be there. */
-.landing-footer {
-  background: var(--landing-footer-bg);
-  padding: 4rem 1.5rem 3rem;
-  text-align: center;
-}
-
-.landing-footer-note {
-  margin: 1.5rem 0 0;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 @media (max-width: 767px) {
