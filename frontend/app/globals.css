@@ -523,7 +523,10 @@ body {
 .theme-toggle-btn {
   position: fixed;
   top: 1.25rem;
-  right: 1.5rem;
+  /* Pulled in further from the raw edge (1.5rem, then 3rem, both still
+     read as too close to the corner per direct feedback) — moved
+     further left again. */
+  right: 5rem;
   z-index: 50;
   display: inline-flex;
   align-items: center;
