@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { QueryInput } from "@/components/chat/QueryInput";
-import { StreamingStatus } from "@/components/chat/StreamingStatus";
 import { MessageList } from "@/components/chat/MessageList";
 import { Card } from "@/components/ui/Card";
 import { createResearchRun, ApiError } from "@/lib/api";
@@ -130,8 +129,13 @@ export default function HomePage() {
       {currentQuery && (
         <>
           <RelatedPastResearch items={relatedPastResearch} />
-          <StreamingStatus steps={steps} isStreaming={isStreaming} />
-          <MessageList query={currentQuery} done={done} error={error} />
+          <MessageList
+            query={currentQuery}
+            done={done}
+            error={error}
+            steps={steps}
+            isStreaming={isStreaming}
+          />
         </>
       )}
 

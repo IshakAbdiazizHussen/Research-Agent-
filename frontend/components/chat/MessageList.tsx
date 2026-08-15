@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/Card";
-import type { DoneEventData } from "@/types/research";
+import { StreamingStatus } from "@/components/chat/StreamingStatus";
+import type { DoneEventData, ProgressEventData } from "@/types/research";
 
 interface MessageListProps {
   query: string;
@@ -8,18 +9,35 @@ interface MessageListProps {
    * lib/sse.ts / lib/api.ts, which never forward raw backend error text
    * (docs/development_plan.md Security). */
   error: string | null;
+  /** Live progress steps for the currently in-flight exchange only — a
+   * past (history) exchange has no steps to replay, so these default to
+   * "nothing streaming," which renders nothing (StreamingStatus's own
+   * guard), not a special case here. */
+  steps?: ProgressEventData[];
+  isStreaming?: boolean;
 }
 
 const GENERIC_FAILURE_MESSAGE =
   "This research run could not be completed. Please try again.";
 
-export function MessageList({ query, done, error }: MessageListProps) {
+export function MessageList({
+  query,
+  done,
+  error,
+  steps = [],
+  isStreaming = false,
+}: MessageListProps) {
   return (
     <div className="message-list">
       <Card className="message message-user">
         <p className="message-role">You asked</p>
         <p>{query}</p>
       </Card>
+
+      {/* Sits between the user's bubble and the eventual reply — reads as
+       * "waiting for a reply" while streaming, and as a short process log
+       * once the reply bubble below it has landed. */}
+      <StreamingStatus steps={steps} isStreaming={isStreaming} />
 
       {error && (
         <Card className="message message-error" role="alert">

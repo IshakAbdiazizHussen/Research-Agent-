@@ -123,7 +123,9 @@ body {
 
 .streaming-status {
   list-style: none;
-  margin: 0 0 1.5rem;
+  /* No bottom margin — now nested inside .message-list between the user
+     and answer bubbles, which already spaces siblings via its own gap. */
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -172,10 +174,15 @@ body {
   white-space: nowrap;
 }
 
+/* Chat-bubble layout (docs/architecture.md decision log: "Message display
+   bubble layout" — a rendering-only change, not a new feature; the flex
+   column here no longer stretches items to full width, so each bubble
+   below sizes to its own content, capped by .message's max-width). */
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
@@ -187,12 +194,40 @@ body {
   color: var(--color-text-muted);
 }
 
+.message {
+  max-width: 78%;
+  overflow-wrap: break-word;
+}
+
 .message p {
   margin: 0;
   line-height: 1.5;
 }
 
+/* User bubble — right-aligned, filled with the same accent blue as the
+   primary Research button. */
+.message-user {
+  align-self: flex-end;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  border-radius: 18px 18px 4px 18px;
+}
+
+.message-user .message-role {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Answer bubble — left-aligned, a shade lighter than the page background
+   (var(--color-surface), already lighter than var(--color-bg)) so it
+   reads as distinct from the page without introducing a new color. */
+.message-assistant {
+  align-self: flex-start;
+  border-radius: 18px 18px 18px 4px;
+}
+
 .message-error {
+  align-self: flex-start;
+  border-radius: 18px 18px 18px 4px;
   background: var(--color-error-bg);
   border-color: var(--color-error-border);
 }
@@ -212,4 +247,5 @@ body {
 
 .sources-list a {
   color: var(--color-accent);
+  overflow-wrap: anywhere;
 }
