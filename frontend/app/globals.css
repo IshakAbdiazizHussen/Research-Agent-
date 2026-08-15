@@ -63,8 +63,13 @@ body {
 
 .chat-input-bar {
   flex-shrink: 0;
-  border-top: 1px solid var(--color-border);
   background: var(--color-bg);
+  /* No border — plain background transition from chat area to input bar.
+     Transition smooths any shift in the bar's own box (e.g. mobile
+     dvh recalculation as browser chrome shows/hides) rather than an
+     instant snap; the bar's fixed-at-bottom behavior itself is
+     unchanged — flex layout still guarantees that, not this rule. */
+  transition: transform 180ms ease, height 180ms ease;
 }
 
 .chat-input-bar-inner {
