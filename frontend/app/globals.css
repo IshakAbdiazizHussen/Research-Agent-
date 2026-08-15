@@ -1,4 +1,77 @@
+/* Theme system (development_plan.md Feature 8: Landing Page & Theme
+   System). Three layers, standard pattern for "respect system
+   preference by default, let an explicit toggle override it either
+   direction, no flash of the wrong theme on load":
+
+   1. Bare :root below — the light palette, and the only place any of
+      these tokens are DEFINED (every block after this only ever
+      REDEFINES a subset of the same names, on purpose, so the two
+      palettes can't drift out of sync structurally).
+   2. @media (prefers-color-scheme: dark), guarded with
+      :root:not([data-theme="light"]) — applies only before the user has
+      ever made an explicit choice (or if storage is unavailable).
+   3. :root[data-theme="dark"] — the explicit choice, set by
+      ThemeToggle.tsx (components/theme/) and applied before first paint
+      by the inline script in app/layout.tsx. Always wins over #2.
+
+   The dark values in #2 and #3 are IDENTICAL, and deliberately equal to
+   this app's original (and only, until now) dark-only palette — the
+   whole chat interface was built and verified against these exact
+   values; this refactor re-homes them into theme-scoped selectors, it
+   does not change them. */
 :root {
+  --color-bg: #f8fbfd;
+  --color-surface: #eaf1f7;
+  --color-border: #d3dfe8;
+  --color-text: #10283d;
+  --color-text-muted: #5b7182;
+  --color-accent: #2f6fd6;
+  --color-button-primary: #0b6fac;
+  --color-error-bg: #fdecee;
+  --color-error-border: #f0b8bf;
+  --color-error-text: #a4293a;
+  /* Landing page (app/page.tsx) — one continuous gradient spans hero +
+     "How it works" + "Key capabilities" (.landing-page), reaching its
+     deepest tone by the last of those sections; --landing-footer-bg is
+     that same end tone as a flat color, for the final CTA/footer below
+     the fold (not shown in the reference image — this avoids an
+     abrupt seam back to a lighter color at a point with no reference to
+     match against). --card-glass-bg/-border and --badge-bg are the
+     frosted-glass card treatment "How it works"/"Key capabilities" cards
+     share, letting the gradient show through instead of sitting on an
+     opaque fill. --toggle-bg is the theme-toggle pill's translucent
+     fill. All theme-aware for the same reason everything else here is:
+     the toggle affects the ENTIRE app, landing page included. */
+  --hero-gradient: linear-gradient(135deg, #eef8ff 0%, #bcdff0 35%, #4fa3d6 70%, #1c7fbe 100%);
+  --landing-footer-bg: #1c7fbe;
+  --card-glass-bg: rgba(255, 255, 255, 0.4);
+  --card-glass-border: rgba(255, 255, 255, 0.55);
+  --badge-bg: rgba(255, 255, 255, 0.75);
+  --toggle-bg: rgba(255, 255, 255, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #0b0d12;
+    --color-surface: #151822;
+    --color-border: #2a2e3a;
+    --color-text: #e8e9ed;
+    --color-text-muted: #9a9fae;
+    --color-accent: #5b8def;
+    --color-button-primary: #3b82f6;
+    --color-error-bg: #2a1418;
+    --color-error-border: #6b2530;
+    --color-error-text: #f2a5ae;
+    --hero-gradient: linear-gradient(135deg, #0b0d12 0%, #0f1720 35%, #142a3d 70%, #1a3f5c 100%);
+    --landing-footer-bg: #1a3f5c;
+    --card-glass-bg: rgba(255, 255, 255, 0.05);
+    --card-glass-border: rgba(255, 255, 255, 0.12);
+    --badge-bg: rgba(255, 255, 255, 0.12);
+    --toggle-bg: rgba(255, 255, 255, 0.08);
+  }
+}
+
+:root[data-theme="dark"] {
   --color-bg: #0b0d12;
   --color-surface: #151822;
   --color-border: #2a2e3a;
@@ -9,6 +82,12 @@
   --color-error-bg: #2a1418;
   --color-error-border: #6b2530;
   --color-error-text: #f2a5ae;
+  --hero-gradient: linear-gradient(135deg, #0b0d12 0%, #0f1720 35%, #142a3d 70%, #1a3f5c 100%);
+  --landing-footer-bg: #1a3f5c;
+  --card-glass-bg: rgba(255, 255, 255, 0.05);
+  --card-glass-border: rgba(255, 255, 255, 0.12);
+  --badge-bg: rgba(255, 255, 255, 0.12);
+  --toggle-bg: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -22,9 +101,17 @@ body {
 
 body {
   margin: 0;
-  overflow: hidden; /* .chat-shell (position:fixed, covers the viewport) owns all scrolling; nothing on body should ever be able to reveal a gap behind it */
+  /* No overflow:hidden here (deliberately removed) — body is now shared
+     by two very different routes: the chat interface (app/app/page.tsx,
+     .chat-shell's position:fixed;inset:0 owns all its scrolling — a
+     fixed element is out of normal flow, so it contributes nothing to
+     body's own scrollable content regardless of this rule) and the
+     landing page (app/page.tsx), which is a normal, tall, scrolling
+     page and would have been unable to scroll at all under a blanket
+     overflow:hidden here. */
   background: var(--color-bg);
   color: var(--color-text);
+  transition: background-color 150ms ease, color 150ms ease;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -401,6 +488,223 @@ body {
    plain rule. Keeping every override here, after all of it, avoids that
    class of bug entirely rather than tracking each affected selector's
    position by hand. */
+
+/* Chat-interface header actions (app/app/page.tsx) — groups the theme
+   toggle and "Clear chat" button together on the header's right side. */
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Theme toggle pill (components/theme/ThemeToggle.tsx) — used both in
+   the chat header (against a solid --color-surface/--color-bg-ish
+   background) and the landing hero (against --hero-gradient), so it's
+   translucent + blurred ("frosted glass") rather than a flat fill, to
+   read cleanly against either. */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  background: var(--toggle-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Landing page (app/page.tsx) — development_plan.md Feature 8, rebuilt
+   against an exact reference image (not the earlier from-description
+   pass): ONE continuous diagonal gradient spans the entire page —
+   hero, "How it works," and "Key capabilities" alike, all the way down
+   — not a hero-only gradient handing off to a flat section background.
+   .landing-page carries --hero-gradient; it sizes to the full rendered
+   content height by default (a plain CSS background, no
+   background-attachment:fixed), which is what stretches the same
+   near-white-to-deep-blue transition gradually across a page far taller
+   than one viewport, matching the reference's low-contrast, gradual
+   feel instead of a hero-height gradient that resets per section. */
+.landing-topbar {
+  height: 6px;
+  background: #0a0a0a;
+}
+
+.landing-page {
+  background: var(--hero-gradient);
+}
+
+.landing-hero {
+  /* No min-height:100vh (removed — confirmed via measurement, not
+     assumption, to be the actual cause of a real bug: it forced the
+     hero to always fill the full viewport regardless of its own much
+     shorter content, e.g. exactly 900px tall at a 900px-tall viewport,
+     leaving ~275px of dead centered whitespace before "How it works").
+     Height now comes from content + padding alone, like any normal
+     section — proportionate at any viewport size instead of chasing
+     whatever height the browser window happens to be. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6rem 1.5rem 4rem;
+}
+
+.landing-hero-toggle {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+}
+
+.landing-headline {
+  margin: 0 0 1.25rem;
+  /* Narrow enough that "Get a cited answer from the live web." wraps
+     after "live" at typical desktop widths, matching the reference's
+     exact 3-line break ("web." alone on its own line) — verified via
+     screenshot, not just estimated from the CSS alone. */
+  max-width: 860px;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+.landing-subhead {
+  margin: 0 0 2.25rem;
+  max-width: 640px;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--color-text);
+  opacity: 0.82;
+}
+
+.landing-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 2.1rem;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-button-primary);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(11, 111, 172, 0.35);
+}
+
+.landing-cta:hover {
+  filter: brightness(1.06);
+}
+
+.landing-sections {
+  padding: 0 1.5rem 5rem;
+}
+
+.landing-section-inner {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.landing-section-inner + .landing-section-inner {
+  margin-top: 5rem;
+}
+
+.landing-section-title {
+  margin: 0 0 2.5rem;
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Frosted/translucent glass treatment — shared by "How it works" steps
+   and "Key capabilities" cards (the reference only shows the former in
+   full, but explicitly calls for the latter to match its visual
+   language). Lets the page-length gradient behind it show through
+   rather than sitting on an opaque fill, which is what makes it read as
+   "one page" rather than hero-then-a-different-section. */
+.landing-steps,
+.landing-capabilities {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.landing-step,
+.landing-capability-card {
+  padding: 1.75rem 1.5rem;
+  background: var(--card-glass-bg);
+  border: 1px solid var(--card-glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(15, 40, 61, 0.08);
+}
+
+.landing-step {
+  text-align: center;
+}
+
+.landing-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: var(--badge-bg);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.landing-step-title,
+.landing-capability-title {
+  margin: 0 0 0.4rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.landing-step-desc,
+.landing-capability-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.landing-capability-title {
+  font-size: 1rem;
+}
+
+/* Below the fold — not shown in the reference image, so styled with
+   judgment consistent with the rest of the page rather than matched
+   exactly: a flat continuation of the gradient's own deepest tone
+   (--landing-footer-bg), not the light gradient restarting or an
+   unrelated color, so there's no seam at a point with nothing to match
+   against. Sits outside .landing-page (a flat color, not part of the
+   gradient itself) specifically so its white text/CTA styling doesn't
+   need to vary by how light or dark the gradient happens to be there. */
+.landing-footer {
+  background: var(--landing-footer-bg);
+  padding: 4rem 1.5rem 3rem;
+  text-align: center;
+}
+
+.landing-footer-note {
+  margin: 1.5rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 @media (max-width: 767px) {
   .page {
     padding: 2rem 1rem 1.5rem;
@@ -416,5 +720,15 @@ body {
 
   .subtitle-short {
     display: inline;
+  }
+
+  .landing-steps,
+  .landing-capabilities {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-hero-toggle {
+    top: 1rem;
+    right: 1rem;
   }
 }

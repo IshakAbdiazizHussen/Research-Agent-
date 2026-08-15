@@ -509,3 +509,133 @@ isolated from API/auth concerns.
   correct before trusting it on the full eval set.
 - Done when: running the eval harness produces the three metrics defined
   in `project_definition.md`'s success criteria against the current graph.
+
+---
+
+## Feature 8: Landing Page & Theme System
+
+**Read four docs before you did the update or moving to next feature.**
+
+### Spec
+**Unlike Features 1-7, this does not trace to a step in `project_definition.md`'s
+Section 1 problem breakdown** — that breakdown scopes the research-agent
+capability itself (retrieval, grading, synthesis, persistence), and has no
+analog for a marketing/landing surface or a light/dark theme system. This
+is user-commissioned product-surface work layered on top of the completed
+v1 capability (a growth/first-impression surface, and a visual preference
+users of any web app reasonably expect), not a fix for one of the
+original failure modes. Flagged explicitly rather than forcing a fake
+"traces to Step X" justification the way Features 1-7 legitimately can.
+It's captured as a Feature (not just an `architecture.md` decision log
+row, the pattern used for smaller implementation-level changes throughout
+Features 6/7's follow-up work) because of its actual size: a new route, a
+new page, and an app-wide theming architecture change touching every
+existing CSS rule, not a tweak to one already-shipped piece.
+
+Two parts. **Part 1 — Landing page:** the chat interface moves from `/`
+to `/app`; `/` becomes a new marketing landing page (hero + "How it
+works" + "Key capabilities" + repeated CTA) linking into `/app`. **Part
+2 — Theme system:** a light/dark toggle, reachable from both the landing
+page and the chat interface, applying to the entire app (not just the
+new landing page) — including bubbles, the streaming-status indicator,
+error states, and the related-past-research card that were built
+dark-only through Feature 6/7's follow-up work.
+
+### Prompts
+None — frontend only, no LLM calls originate here.
+
+### Security
+No new attack surface: the theme choice and chat history (already
+covered by Feature 6's follow-up work) are the only things in
+`localStorage`, both non-sensitive, both client-side/this-browser-only by
+design — no new data leaves the browser, no new backend endpoint. The
+theme-init script (`app/layout.tsx`) reads/writes only its own
+namespaced `localStorage` key, wrapped in try/catch so a broken/
+unavailable storage can't block the page from rendering.
+
+### Guidelines
+Every color in `app/globals.css` must resolve through a themed CSS
+custom property (`--color-*`, `--hero-gradient`, `--toggle-bg`) — no
+hardcoded hex/rgb color introduced outside the three theme-definition
+blocks at the top of the file (bare `:root`, the
+`prefers-color-scheme: dark` media query, and `:root[data-theme="dark"]`).
+The dark palette in the latter two blocks must stay pixel-identical to
+each other and to the app's original (pre-Feature-8) dark-only values —
+this is a re-homing of already-shipped, already-verified colors into
+theme-scoped selectors, not a redesign of dark mode. `lib/theme.ts` is
+the single source of truth for the storage key and light/dark precedence
+logic for anything running *after* hydration; the inline script in
+`app/layout.tsx` necessarily duplicates that logic in dependency-free
+JS (it must run before any bundled module, including `lib/theme.ts`, is
+parsed) — if the precedence rule ever changes, both places need updating,
+by construction, not an oversight to avoid.
+
+### Implementation
+1. Move the existing chat interface from `app/page.tsx` to
+   `app/app/page.tsx` (the `/app` route) unchanged apart from adding the
+   theme toggle to its header.
+2. Restructure `app/globals.css`'s token definitions into the three-layer
+   theme pattern (bare `:root` = light/default, `@media
+   (prefers-color-scheme: dark)` guarded with `:root:not([data-theme="light"])`,
+   and `:root[data-theme="dark"]`) — audit and convert every other
+   hardcoded color in the file into one of these tokens.
+3. `lib/theme.ts`: `getStoredTheme()` / `setStoredTheme()` /
+   `getSystemTheme()` / `getActiveTheme()` / `applyTheme()` — same
+   never-throws, `typeof window === "undefined"`-guarded contract as
+   `lib/historyStorage.ts`.
+4. `components/theme/ThemeToggle.tsx`: a small client component reused
+   in both the landing hero and the chat header; label names the theme
+   clicking it switches *to*.
+5. `app/layout.tsx`: a synchronous (non-async, non-deferred) inline
+   `<script>` in `<head>`, setting `[data-theme]` on `<html>` before
+   first paint, plus `suppressHydrationWarning` on that same element
+   (required, not optional — the script's pre-hydration attribute write
+   is a genuine, expected difference from the server-rendered HTML that
+   React would otherwise warn about on every load).
+6. New `app/page.tsx`: the landing page. Rebuilt once against an exact
+   reference image partway through this feature (not just the earlier
+   from-description pass) — one continuous `--hero-gradient` spans the
+   hero *and* "How it works" *and* "Key capabilities" (`.landing-page`),
+   not a hero-only gradient handing off to a flat `--color-bg` section;
+   both sections' cards are translucent/frosted (`--card-glass-bg`/
+   `-border`, `backdrop-filter: blur()`) so the gradient shows through,
+   with light-circle/dark-text step-number badges (`--badge-bg`); a
+   `--landing-footer-bg` flat color (the gradient's own deepest tone)
+   for the closing CTA/footer below the fold, which the reference didn't
+   show. Repeated CTA links to `/app` via `next/link`.
+
+### Quality Assurance
+- Frontend feature — from `frontend/`, run `npm run lint` and
+  `npm run build`; both must pass (no `ruff`/`mypy`/`pytest` — this
+  feature touches no backend code).
+- Manual/Playwright test: screenshot the landing page and the chat
+  interface (with a real exchange) in both themes — bubbles, citations,
+  and the streaming-status indicator (checkmark/active-dot rows) must all
+  stay legible and correctly styled in both.
+- Manual/Playwright test: toggle the theme, reload, confirm it persisted
+  (`localStorage` + the re-rendered `[data-theme]` attribute).
+- No hydration-mismatch console errors on load, in either theme (a real
+  one was found and fixed during this feature's own QA — see
+  `suppressHydrationWarning` above — not assumed clean).
+- No excess dead space between the hero and "How it works": a real bug
+  (`.landing-hero`'s `min-height: 100vh`/`100dvh`, later removed — it
+  forced the hero to always fill the full viewport regardless of its own
+  much shorter content, leaving ~275px of dead centered whitespace)
+  confirmed by measuring computed height/gap via Playwright before
+  changing anything — `heroActualHeight` was byte-equal to
+  `window.innerHeight` at two different viewport heights, proving the
+  min-height was binding, not assumed from a screenshot. Fixed by
+  removing it (height now comes from content + padding alone); re-
+  measured gap between the CTA and "How it works" dropped from
+  274px/278px (desktop/mobile) to 64px/64px.
+- No flash-of-wrong-theme: verified by pre-seeding `localStorage` with a
+  non-default theme choice, then inspecting `[data-theme]` and the
+  computed body background at `domcontentloaded` (the earliest practical
+  inspection point) — both already correct that early, identical again
+  after full page settle — plus confirming the init script tag itself is
+  non-async/non-deferred/non-module, which is *why* a flash is
+  structurally not possible, not just an empirical one-run observation.
+- Done when: both routes render correctly in both themes, the toggle is
+  reachable and persists from both pages, and none of Feature 6/7's
+  already-verified chat behavior (bubble alignment, streaming-status
+  collapse-on-completion, chat history persistence, CORS) regressed.
