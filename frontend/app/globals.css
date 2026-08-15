@@ -535,11 +535,6 @@ body {
    near-white-to-deep-blue transition gradually across a page far taller
    than one viewport, matching the reference's low-contrast, gradual
    feel instead of a hero-height gradient that resets per section. */
-.landing-topbar {
-  height: 6px;
-  background: #0a0a0a;
-}
-
 .landing-page {
   background: var(--hero-gradient);
 }

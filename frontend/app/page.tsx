@@ -53,8 +53,6 @@ const CAPABILITIES = [
 export default function LandingPage() {
   return (
     <>
-      <div className="landing-topbar" />
-
       <div className="landing-page">
         <section className="landing-hero">
           <div className="landing-hero-toggle">
