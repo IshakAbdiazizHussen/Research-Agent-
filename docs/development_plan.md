@@ -627,7 +627,13 @@ by construction, not an oversight to avoid.
   min-height was binding, not assumed from a screenshot. Fixed by
   removing it (height now comes from content + padding alone); re-
   measured gap between the CTA and "How it works" dropped from
-  274px/278px (desktop/mobile) to 64px/64px.
+  274px/278px (desktop/mobile) to 64px/64px. **Follow-up:** 64px then
+  read as too tight against the CTA button — raised `.landing-hero`'s
+  bottom padding from `4rem` to `8rem` (the entire gap is that one
+  padding value, `.landing-sections` has no top padding of its own),
+  re-measured at 128px/128px. Still a single, deliberate, proportionate
+  padding value — not a reintroduction of the removed min-height bug's
+  viewport-chasing behavior.
 - No flash-of-wrong-theme: verified by pre-seeding `localStorage` with a
   non-default theme choice, then inspecting `[data-theme]` and the
   computed body background at `domcontentloaded` (the earliest practical

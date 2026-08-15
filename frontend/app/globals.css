@@ -552,7 +552,13 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 6rem 1.5rem 4rem;
+  /* Bottom padding is the entire gap to "How it works" below (.landing-
+     sections has no top padding of its own) — 4rem read as too tight/
+     cramped against the CTA button, raised to 8rem. Still nowhere near
+     the removed min-height:100vh bug's ~275px of dead space (this is a
+     deliberate, proportionate gap driven by one padding value, not
+     empty space from a forced full-viewport box). */
+  padding: 6rem 1.5rem 8rem;
 }
 
 .landing-hero-toggle {
