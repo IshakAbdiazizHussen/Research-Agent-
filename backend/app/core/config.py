@@ -51,7 +51,15 @@ class Settings(BaseSettings):
     # browser frontend is served from. Required for the frontend's
     # fetch()/SSE calls to backend/app/api/routes/research.py to work at
     # all (cross-origin by default: frontend on :3000, backend on :8000).
-    cors_allowed_origins: str = "http://localhost:3000"
+    #
+    # Both localhost and 127.0.0.1 variants included deliberately, not
+    # just localhost — a browser treats them as two distinct origins even
+    # though they resolve to the same host, and a real preflight 400
+    # ("Disallowed CORS origin") was reproduced against this exact gap:
+    # http://localhost:3000 was allowed, http://127.0.0.1:3000 was not,
+    # so accessing the frontend via the 127.0.0.1 form broke every
+    # POST/GET call to this API. See docs/architecture.md's decision log.
+    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     @property
     def cors_allowed_origins_list(self) -> list[str]:

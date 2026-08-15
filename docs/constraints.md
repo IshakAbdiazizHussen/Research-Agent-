@@ -193,6 +193,33 @@ per-customer soft rate-limit remain open engineering baselines, as above.
   design trade-off (not a one-line fix), so deliberately left open rather
   than guessed at further.
 
+## Dev server hygiene (local development)
+
+- **Habit, not a hard rule:** before starting either dev server, clear its
+  expected port first, so a leftover process from an earlier session
+  can't silently keep running underneath a new one:
+  - Backend: `lsof -ti :8000 | xargs kill -9` before `uvicorn
+    app.main:app --reload`.
+  - Frontend: `lsof -ti :3000 | xargs kill -9` before `npm run dev`.
+- **Why this earns a habit, not just a one-off tip:** a stray, never-killed
+  `next dev` process left over from an earlier restart caused a real,
+  genuinely hard-to-diagnose bug (docs/architecture.md's "CORS allowed
+  origins" decision log, follow-up incident) — Next.js silently falls back
+  to the next free port (3001, 3002, ...) when 3000 is still held by a
+  not-yet-fully-exited prior process, rather than erroring, so nothing
+  visibly signals that two servers are now running at once. A restart
+  script/habit that only checks-and-kills by the *expected* port (3000)
+  won't notice the fallback either — the failure only surfaced later, as
+  an origin the CORS allow-list had never heard of. The backend has the
+  same failure mode in principle (a stray `uvicorn` process holding 8000
+  while a new one silently... doesn't, since `uvicorn` errors out on a
+  bound port rather than falling back — so this has only been observed as
+  a real bug on the frontend side, but the check-first habit costs nothing
+  either way).
+- Not enforced anywhere in code or CI — this is dev-workflow tribal
+  knowledge, written down so it doesn't need rediscovering, the same
+  reasoning as the "Known test-suite flakes" section above.
+
 ## What requires sign-off before being built
 
 The following must not be built or changed without your explicit approval
