@@ -44,8 +44,15 @@
      the toggle affects the ENTIRE app, landing page included. */
   --hero-gradient: linear-gradient(135deg, #eef8ff 0%, #bcdff0 35%, #4fa3d6 70%, #1c7fbe 100%);
   --landing-footer-bg: #1c7fbe;
-  --card-glass-bg: rgba(255, 255, 255, 0.4);
-  --card-glass-border: rgba(255, 255, 255, 0.55);
+  /* Was rgba(255,255,255,0.4) — that read as a near-opaque white card
+     floating on top of the blue gradient instead of a frosted tint of
+     it. Dropped to 0.16 (border 0.35, kept more visible than the fill
+     so cards still read as distinct panels) — same low-opacity
+     white-over-blue-gradient approach dark mode already used correctly
+     below (0.05/0.12); light mode just needs a bit more presence since
+     its gradient itself is lighter overall. */
+  --card-glass-bg: rgba(255, 255, 255, 0.16);
+  --card-glass-border: rgba(255, 255, 255, 0.35);
   --badge-bg: rgba(255, 255, 255, 0.75);
   --toggle-bg: rgba(255, 255, 255, 0.55);
 }
