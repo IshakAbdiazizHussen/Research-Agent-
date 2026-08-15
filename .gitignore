@@ -31,6 +31,18 @@ build/
 # covered above. If schema.prisma ever sets an explicit `output` path,
 # add that path here too.
 
+# Prisma engine binary download cache — PRISMA_BINARY_CACHE_DIR is set (Render
+# dashboard env var, not committed here) to a project-relative path so that
+# `prisma generate`'s downloaded query-engine binaries land inside the
+# directory tree Render actually promotes from its build step into the
+# running instance, instead of the default ~/.cache/prisma-python/binaries/
+# (a path on the build machine's own disk, confirmed via Render's own docs
+# not to carry over to the runtime instance — architecture.md decision log).
+# Never committed: platform-specific downloaded binaries, redownloaded fresh
+# on every `prisma generate` run regardless of who/where runs it.
+.prisma-binary-cache/
+backend/.prisma-binary-cache/
+
 # --- Node / Next.js ------------------------------------------------------
 node_modules/
 .next/
