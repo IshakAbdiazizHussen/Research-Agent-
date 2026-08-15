@@ -5,6 +5,7 @@
   --color-text: #e8e9ed;
   --color-text-muted: #9a9fae;
   --color-accent: #5b8def;
+  --color-button-primary: #3b82f6;
   --color-error-bg: #2a1418;
   --color-error-border: #6b2530;
   --color-error-text: #f2a5ae;
@@ -57,6 +58,13 @@ body {
   max-width: 720px;
   margin: 0 auto;
   padding: 3rem 1.5rem 2rem;
+  /* min-height (not height) so .page still grows past the scroll area's
+     visible height once there's enough chat content to need scrolling —
+     this only gives .empty-state room to center itself vertically when
+     content is otherwise short. */
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .page h1 {
@@ -67,6 +75,28 @@ body {
   color: var(--color-text-muted);
   margin-top: 0;
   margin-bottom: 2rem;
+}
+
+/* Two subtitle variants — CSS-switched, see the media query below. */
+.subtitle-short {
+  display: none;
+}
+
+/* Centered in the middle of the chat scroll area, not just top-aligned
+   under the header — flex:1 claims the remaining space in .page (a flex
+   column stretched to at least fill .chat-scroll via min-height:100%
+   above), then centers within it. Only rendered when there's zero
+   history and no in-flight query (app/page.tsx) — disappears the instant
+   a question is submitted. */
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  text-align: center;
 }
 
 .chat-input-bar {
@@ -91,10 +121,27 @@ body {
   gap: 0.5rem;
 }
 
+.query-input button {
+  /* Never shrinks/wraps under horizontal pressure at narrow widths — the
+     input field (flex:1, and text inputs shrink gracefully) absorbs all
+     the compression instead, so "Research"/"Researching…" always stays
+     intact on one line. */
+  flex-shrink: 0;
+  white-space: nowrap;
+  /* True pill shape, not just "rounder corners" — 9999px is always >=
+     half the button's own height regardless of its actual computed
+     height, so both ends render as perfect semicircles. Scoped to this
+     button specifically (not the shared .btn class) so a hypothetical
+     future .btn-secondary use elsewhere isn't pill-shaped by accident. */
+  border-radius: 9999px;
+}
+
 .query-input input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  /* True pill shape — see .query-input button above for why 9999px
+     rather than a fixed small value. */
+  border-radius: 9999px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
@@ -119,7 +166,10 @@ body {
 }
 
 .btn-primary {
-  background: var(--color-accent);
+  /* Scoped to just the primary button — the user-bubble color, links, and
+     streaming-status dot all still use --color-accent unchanged, this is
+     a separate token specifically for this button. */
+  background: var(--color-button-primary);
   color: white;
 }
 
@@ -295,4 +345,37 @@ body {
 .sources-list a {
   color: var(--color-accent);
   overflow-wrap: anywhere;
+}
+
+/* Narrower (tablet/mobile) breakpoint — tighter horizontal padding, a
+   shorter header subtitle that fits one line, and a guarantee that the
+   input bar's button never wraps/shrinks under pressure (see
+   .query-input button above). 768px matches this project's only other
+   sizing convention with a "tablet/mobile" cutoff in mind.
+
+   Deliberately placed at the end of this file, not immediately after
+   .page/.chat-input-bar-inner above: with equal selector specificity, an
+   in-media-query rule declared *before* a plain rule targeting the same
+   selector loses the cascade tie to it (media queries don't add
+   specificity — only source order decides), so an override placed
+   earlier in the file would have been silently defeated by the later
+   plain rule. Keeping every override here, after all of it, avoids that
+   class of bug entirely rather than tracking each affected selector's
+   position by hand. */
+@media (max-width: 767px) {
+  .page {
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .chat-input-bar-inner {
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .subtitle-long {
+    display: none;
+  }
+
+  .subtitle-short {
+    display: inline;
+  }
 }

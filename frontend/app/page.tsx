@@ -136,8 +136,21 @@ export default function HomePage() {
         <main className="page">
           <h1>Research Agent</h1>
           <p className="page-subtitle">
-            Ask a question — it&apos;s researched live across the web, with cited sources.
+            {/* Two variants, CSS-switched by media query (not JS) — same
+             * approach as the rest of this file's responsive behavior,
+             * and avoids a hydration mismatch since both are always in
+             * the DOM, only visibility changes. */}
+            <span className="subtitle-long">
+              Ask a question — I&apos;ll search the live web and give you a cited answer.
+            </span>
+            <span className="subtitle-short">
+              Ask a question — get a cited, grounded answer.
+            </span>
           </p>
+
+          {history.length === 0 && !currentQuery && (
+            <p className="empty-state">Ask a research question to get started.</p>
+          )}
 
           {history.map((exchange, index) => (
             <MessageList
