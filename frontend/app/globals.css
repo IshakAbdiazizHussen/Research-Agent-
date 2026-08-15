@@ -491,31 +491,58 @@ body {
    position by hand. */
 
 /* Chat-interface header actions (app/app/page.tsx) — groups the theme
-   toggle and "Clear chat" button together on the header's right side. */
+   toggle and "Clear chat" button together in the DOM. The toggle itself
+   is always position:fixed now (see .theme-toggle-btn below), so this
+   only actually lays out "Clear chat" in normal flow; kept as the
+   toggle's DOM parent anyway since fixed positioning doesn't care about
+   ancestors (no transform/filter on any of .chat-shell/.chat-scroll/
+   .page/.page-header creates a containing block that would change
+   that). */
 .page-header-actions {
   display: flex;
   align-items: center;
   gap: 0.6rem;
 }
 
-/* Theme toggle pill (components/theme/ThemeToggle.tsx) — used both in
-   the chat header (against a solid --color-surface/--color-bg-ish
-   background) and the landing hero (against --hero-gradient), so it's
-   translucent + blurred ("frosted glass") rather than a flat fill, to
-   read cleanly against either. */
+/* Theme toggle (components/theme/ThemeToggle.tsx) — icon-only sun/moon
+   pill, always position:fixed to the viewport's top-right corner on
+   BOTH routes (landing page and chat interface), so it stays visible in
+   the same spot while scrolling instead of scrolling away with content.
+   Previously this was two different approaches per page (an
+   absolutely-positioned wrapper on the landing hero, a conditionally-
+   fixed override on the chat header) that only coincidentally lined up;
+   unifying on one always-fixed rule for the shared .theme-toggle-btn
+   class is simpler and guarantees both routes match by construction
+   rather than by two rules staying in sync.
+   Used both against a solid --color-surface/--color-bg-ish background
+   (chat header) and --hero-gradient (landing page), so it's translucent
+   + blurred ("frosted glass") rather than a flat fill, to read cleanly
+   against either. z-index:50 keeps it above chat message content as the
+   scroll area passes underneath it (nothing else in this codebase uses
+   z-index, so there's no existing stacking value it needs to clear). */
 .theme-toggle-btn {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 50;
   display: inline-flex;
   align-items: center;
-  padding: 0.5rem 1rem;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
   border-radius: 9999px;
   background: var(--toggle-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
   color: var(--color-text);
-  font-size: 0.8rem;
-  font-weight: 600;
   cursor: pointer;
+}
+
+.theme-toggle-btn svg {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 /* Landing page (app/page.tsx) — development_plan.md Feature 8, rebuilt
@@ -569,12 +596,6 @@ body {
      deliberate, proportionate gap driven by one padding value, not
      empty space from a forced full-viewport box). */
   padding: 6rem 1.5rem 8rem;
-}
-
-.landing-hero-toggle {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.5rem;
 }
 
 .landing-headline {
@@ -758,7 +779,14 @@ body {
 
 @media (max-width: 767px) {
   .page {
-    padding: 2rem 1rem 1.5rem;
+    /* Top padding bumped from 2rem to 2.75rem — a direct, necessary
+       consequence of the theme toggle now being always position:fixed
+       (see .theme-toggle-btn): measured via Playwright, at 2rem the
+       fixed toggle (top:1rem, ~40px tall → bottom edge at 56px) visibly
+       overlapped "Clear chat" (previously top:52px at 2rem padding).
+       2.75rem pushes the header row's top down enough to clear it with
+       margin — verified below, not assumed. */
+    padding: 2.75rem 1rem 1.5rem;
   }
 
   .chat-input-bar-inner {
@@ -784,7 +812,9 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .landing-hero-toggle {
+  /* Shared toggle (both routes) — smaller inset to match the tighter
+     mobile edge margins used elsewhere on this breakpoint. */
+  .theme-toggle-btn {
     top: 1rem;
     right: 1rem;
   }

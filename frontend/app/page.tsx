@@ -54,9 +54,10 @@ export default function LandingPage() {
   return (
     <div className="landing-page">
       <section className="landing-hero">
-        <div className="landing-hero-toggle">
-          <ThemeToggle />
-        </div>
+        {/* No wrapper div needed — .theme-toggle-btn is always
+            position:fixed to the viewport itself now (globals.css),
+            shared identically with the chat header's toggle. */}
+        <ThemeToggle />
 
         <h1 className="landing-headline">
           Ask a question.
