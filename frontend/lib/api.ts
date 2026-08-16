@@ -43,7 +43,28 @@ export function authHeaders(): HeadersInit {
   };
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  /** HTTP status of the response that caused this, when there was one —
+   * absent for a network-level failure (fetch() itself threw, no response
+   * ever arrived). Lets callers branch on status without re-parsing the
+   * message string; the message itself stays the single source of truth
+   * for what's shown to the user. */
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+// POST /research enforcement (post-launch audit — docs/architecture.md
+// decision log "POST /research rate limiting + cost ceiling enforcement").
+// Distinct, still-fully-generic messages for the two new backend response
+// codes — no internal detail either way, just clearer than the one
+// catch-all message previously shown for every non-2xx response.
+const RATE_LIMITED_MESSAGE = "You're sending requests too quickly. Please wait a moment and try again.";
+const COST_CEILING_MESSAGE = "The research service is temporarily unavailable. Please try again later.";
+const GENERIC_START_FAILURE_MESSAGE = "Could not start this research run. Please try again.";
 
 /** POST /research — create a run and kick off graph execution. Throws
  * ApiError with a safe, generic message on failure; never surfaces raw
@@ -66,7 +87,13 @@ export async function createResearchRun(
   }
 
   if (!response.ok) {
-    throw new ApiError("Could not start this research run. Please try again.");
+    if (response.status === 429) {
+      throw new ApiError(RATE_LIMITED_MESSAGE, response.status);
+    }
+    if (response.status === 503) {
+      throw new ApiError(COST_CEILING_MESSAGE, response.status);
+    }
+    throw new ApiError(GENERIC_START_FAILURE_MESSAGE, response.status);
   }
 
   return (await response.json()) as CreateResearchRunResponse;

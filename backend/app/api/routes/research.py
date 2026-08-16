@@ -18,7 +18,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from prisma import Json
 from prisma.models import User
 from pydantic import BaseModel
@@ -27,6 +27,15 @@ from sse_starlette.sse import EventSourceResponse
 from app.agent.checkpointer import get_checkpointer
 from app.agent.graph import build_graph, initial_state
 from app.agent.llm_client import complete
+from app.cache.redis_client import (
+    DAILY_COST_CEILING_USD,
+    RUN_COST_RESERVATION_USD,
+    WEB_SEARCH_COST_PER_CALL_USD,
+    adjust_daily_cost,
+    check_rate_limit,
+    get_daily_cost,
+)
+from app.core.config import Settings, get_settings
 from app.core.deps import get_current_user
 from app.db.prisma_client import prisma
 from app.memory.base import MemoryResult, get_memory_store
@@ -75,6 +84,15 @@ _MEMORY_STORE_RETRY_DELAY_SECONDS = 2.0
 # reimplement identically.
 _MIN_RELATED_RESEARCH_SCORE = 0.3
 
+# POST /research enforcement (post-launch audit — docs/architecture.md
+# decision log "POST /research rate limiting + cost ceiling enforcement").
+# Numeric thresholds live in cache/redis_client.py alongside the Redis
+# operations that enforce them; these are just the safe, generic messages
+# shown to the customer (docs/development_plan.md Security: no internal
+# detail in customer-visible errors).
+_RATE_LIMIT_MESSAGE = "Too many requests. Please wait a moment and try again."
+_COST_CEILING_MESSAGE = "The research service is temporarily unavailable. Please try again later."
+
 # Strong references to in-flight background runs — asyncio does not
 # guarantee an unreferenced Task won't be garbage-collected mid-run.
 _background_tasks: set[asyncio.Task] = set()
@@ -112,6 +130,25 @@ def _describe_step(node_name: str, update: dict[str, Any]) -> str:
     if node_name == "rewriter":
         return f"Insufficient results — rewriting search query to: {update.get('search_query', '')}"
     return f"{node_name} step completed."
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort real client IP behind Render's Cloudflare edge (confirmed
+    via this project's own production audit — Render responses come back
+    through Cloudflare, so `request.client.host` alone would be Cloudflare's
+    edge, not the visitor). `CF-Connecting-IP` is set by Cloudflare itself
+    on every request that passes through it and isn't client-spoofable
+    through that proxy — checked first. `X-Forwarded-For` (its first entry)
+    is the fallback for a non-Cloudflare deployment (e.g. local dev behind
+    a different proxy, or none). `request.client.host` is the last resort —
+    correct for local dev with no proxy in front at all."""
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 async def _next_sequence(run_id: str) -> int:
@@ -156,11 +193,29 @@ async def _store_run_memory(*, user_id: str, run_id: str, query: str, answer: st
                 )
 
 
-async def _run_graph_and_persist(run_id: str, query: str, *, resume: bool = False) -> None:
+async def _run_graph_and_persist(
+    run_id: str,
+    query: str,
+    *,
+    resume: bool = False,
+    cost_date: str | None = None,
+    reserved_cost_usd: float | None = None,
+) -> None:
     """The background worker. Never lets an exception escape uncaught — a
     failure here must land the run in `status=failed` with a safe message,
     not crash silently or leave the row stuck (docs/development_plan.md
-    Security: internal error details never reach the customer)."""
+    Security: internal error details never reach the customer).
+
+    `cost_date`/`reserved_cost_usd` (post-launch audit — docs/
+    architecture.md decision log): when set, the caller already reserved
+    `reserved_cost_usd` worst-case against `cost_date`'s running total
+    before spawning this run; the `finally` block below trues that
+    reservation down to the run's real cost, now that `retry_count` is
+    known. Left `None` for resumed orphaned runs (`resume_orphaned_runs()`
+    below never passes them) — those runs' cost was already reserved by
+    whichever original request created them, and re-reserving on every
+    resume attempt would double-count; deliberately out of scope for this
+    fix, which only touches the fresh-request path."""
     seq = await _next_sequence(run_id)
 
     async def record(role: str, content: str, step_type: str | None) -> None:
@@ -234,10 +289,37 @@ async def _run_graph_and_persist(run_id: str, query: str, *, resume: bool = Fals
             )
         except Exception:
             logger.exception("failed to persist failure state for run_id=%s", run_id)
+    finally:
+        # True up the worst-case reservation made before this run started
+        # (POST /research) down to its real cost, now that retry_count is
+        # known — whatever value it reached, success or mid-run crash
+        # (docs/architecture.md decision log; see this function's own
+        # docstring for why resumed runs skip this entirely). Runs
+        # 1 + retry_count actual retriever calls at
+        # WEB_SEARCH_COST_PER_CALL_USD each, matching constraints.md's own
+        # "up to 1 + MAX_RETRIES = 4 per query" framing.
+        if cost_date is not None and reserved_cost_usd is not None:
+            actual_cost = (1 + retry_count) * WEB_SEARCH_COST_PER_CALL_USD
+            await adjust_daily_cost(cost_date, actual_cost - reserved_cost_usd)
 
 
-def _spawn_run(run_id: str, query: str, *, resume: bool = False) -> None:
-    task = asyncio.create_task(_run_graph_and_persist(run_id, query, resume=resume))
+def _spawn_run(
+    run_id: str,
+    query: str,
+    *,
+    resume: bool = False,
+    cost_date: str | None = None,
+    reserved_cost_usd: float | None = None,
+) -> None:
+    task = asyncio.create_task(
+        _run_graph_and_persist(
+            run_id,
+            query,
+            resume=resume,
+            cost_date=cost_date,
+            reserved_cost_usd=reserved_cost_usd,
+        )
+    )
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
 
@@ -334,8 +416,50 @@ async def resume_orphaned_runs() -> None:
 
 @router.post("/research", response_model=ResearchRunCreated, status_code=201)
 async def create_research_run(
-    payload: ResearchRequest, current_user: User = Depends(get_current_user)
+    request: Request,
+    payload: ResearchRequest,
+    current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
 ) -> ResearchRunCreated:
+    # Rate limit first (post-launch audit — docs/architecture.md decision
+    # log) — cheapest check, runs before anything touches Postgres/Redis
+    # cost tracking/the graph. Runs after get_current_user resolves (a
+    # FastAPI Depends() always runs before the route body), so a request
+    # that fails the auth secret check never reaches here — it's already
+    # free to reject, no benefit to rate-limiting it too.
+    #
+    # Production only: the whole point of this check (per its own design
+    # rationale) is IP-based abuse against a public secret in a real
+    # deployment, not a dev/test concern — and gating it here matters
+    # beyond tidiness. httpx's ASGITransport (tests/test_research_api.py)
+    # resolves every test request to the same fixed client address, so an
+    # ungated check would let repeated local pytest runs (or a developer's
+    # own active local iteration) accumulate against one shared rate-limit
+    # key and start failing with spurious 429s — discovered directly while
+    # verifying this feature, not a hypothetical. Same is_production gate
+    # already used by the CORS and auth checks elsewhere in this file's
+    # module (docs/architecture.md decision log).
+    if settings.is_production:
+        client_ip = _client_ip(request)
+        allowed, retry_after = await check_rate_limit(client_ip)
+        if not allowed:
+            headers = {"Retry-After": str(retry_after)} if retry_after else {}
+            raise HTTPException(status_code=429, detail=_RATE_LIMIT_MESSAGE, headers=headers)
+
+    # Cost ceiling — reserve this run's worst-case cost against today's
+    # running total before starting anything (constraints.md: "checking a
+    # running daily-spend counter before starting a new run"). Fails OPEN
+    # if Redis itself is unreachable (get_daily_cost() returns None) —
+    # already logged loudly at the source; skip both the check and the
+    # reservation rather than log the same outage twice.
+    cost_date = datetime.now(UTC).strftime("%Y-%m-%d")
+    current_cost = await get_daily_cost(cost_date)
+    reserved = current_cost is not None
+    if reserved:
+        if current_cost + RUN_COST_RESERVATION_USD > DAILY_COST_CEILING_USD:
+            raise HTTPException(status_code=503, detail=_COST_CEILING_MESSAGE)
+        await adjust_daily_cost(cost_date, RUN_COST_RESERVATION_USD)
+
     run = await prisma.researchrun.create(
         data={"userId": current_user.id, "query": payload.query}
     )
@@ -348,7 +472,12 @@ async def create_research_run(
         }
     )
 
-    _spawn_run(run.id, payload.query)
+    _spawn_run(
+        run.id,
+        payload.query,
+        cost_date=cost_date if reserved else None,
+        reserved_cost_usd=RUN_COST_RESERVATION_USD if reserved else None,
+    )
 
     # Feature 5, optional and best-effort: surfacing related past research
     # must never block/fail run creation if memory search errors.
