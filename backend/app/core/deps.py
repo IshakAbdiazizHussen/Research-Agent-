@@ -24,6 +24,7 @@ Two paths, branched on `settings.is_production`:
   customer needs isolated data (docs/constraints.md).
 """
 
+import hashlib
 import logging
 import secrets
 
@@ -46,12 +47,40 @@ def _secret_matches(provided: str | None, expected: str | None) -> bool:
     return secrets.compare_digest(provided, expected)
 
 
+# --- TEMP-AUTH-DIAG ----------------------------------------------------
+# Temporary diagnostic logging added to debug an unexplained 401 on
+# POST /research in production, added 2026-08-16, deploy 554abe8 confirmed
+# live. NEVER logs either secret's actual content — only a length and the
+# first 8 hex chars of its SHA-256 hash, so two values can be visually
+# compared for equality without either being reconstructible from the log.
+# REMOVE this whole block (and its one call site below) once the mismatch
+# is found — this must not stay in the codebase long-term.
+def _diag_fingerprint(value: str | None) -> str:
+    if not value:
+        return "missing(len=0)"
+    digest = hashlib.sha256(value.encode()).hexdigest()[:8]
+    return f"len={len(value)} sha256_8={digest}"
+
+
+def _log_auth_diag(x_app_secret: str | None, settings: Settings) -> None:
+    logger.warning(
+        "TEMP-AUTH-DIAG received_secret=[%s] configured_secret=[%s] "
+        "production_user_email_set=%s",
+        _diag_fingerprint(x_app_secret),
+        _diag_fingerprint(settings.app_shared_secret),
+        bool(settings.production_user_email),
+    )
+# --- end TEMP-AUTH-DIAG -------------------------------------------------
+
+
 async def get_current_user(
     x_dev_user_email: str | None = Header(default=None),
     x_app_secret: str | None = Header(default=None),
     settings: Settings = Depends(get_settings),
 ) -> User:
     if settings.is_production:
+        _log_auth_diag(x_app_secret, settings)  # TEMP-AUTH-DIAG — remove with the block above
+
         if not _secret_matches(x_app_secret, settings.app_shared_secret):
             # Generic 401, no detail on *why* — don't tell a caller whether
             # the header was missing vs. wrong (docs/development_plan.md
