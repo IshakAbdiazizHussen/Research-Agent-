@@ -60,13 +60,17 @@ export function streamResearch(
       try {
         await consume(runId, controller.signal, handlers.onEvent);
         return; // stream ended normally (a "done" event, or server closed it)
-      } catch (err) {
+      } catch {
         if (closed || controller.signal.aborted) return;
 
         attempt += 1;
+        // Fixed message only — never log the raw caught error here. This
+        // path runs in the production build too, and the underlying error
+        // could in principle carry backend/network detail (docs/
+        // development_plan.md Security: no internal detail surfaced,
+        // console output included, not just the rendered UI).
         console.warn(
-          `research stream attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS} failed:`,
-          err
+          `research stream attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS} failed; retrying.`
         );
         if (attempt > MAX_RECONNECT_ATTEMPTS) {
           handlers.onError(new Error("Lost connection to the research stream. Please try again."));
