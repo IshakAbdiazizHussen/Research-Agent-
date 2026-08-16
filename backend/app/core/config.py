@@ -61,6 +61,32 @@ class Settings(BaseSettings):
     # POST/GET call to this API. See docs/architecture.md's decision log.
     cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # Tier 1 production auth gate (post-launch security audit finding —
+    # see docs/architecture.md decision log "Production auth: shared-secret
+    # gate + fixed identity"). Both required in production, validated at
+    # startup in app/main.py so a misconfigured deploy fails fast instead
+    # of 500ing per-request; left optional here (not a bare required field
+    # like database_url/openai_api_key above) because development never
+    # needs either — core/deps.py's dev stand-in is untouched.
+    #
+    # app_shared_secret: checked against the client's X-App-Secret header.
+    # This is NOT per-user authentication — it only proves the request came
+    # from someone holding the secret, which is itself necessarily public
+    # (baked into the Vercel frontend's JS bundle as NEXT_PUBLIC_*). Its
+    # purpose is to block unauthenticated internet noise from an otherwise-
+    # bare API (cost/DoS exposure), not to distinguish one customer from
+    # another.
+    app_shared_secret: str | None = None
+
+    # production_user_email: the single fixed account every production
+    # request resolves to once the secret gate passes. Client-supplied
+    # identity (X-Dev-User-Email) is never trusted in production — that's
+    # the actual fix for the impersonation risk, not the secret above.
+    # Correct only because this is a portfolio-stage, single-real-user
+    # deployment; revisit (real per-customer auth) before a second real
+    # customer needs isolated data.
+    production_user_email: str | None = None
+
     @property
     def cors_allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]

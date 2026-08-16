@@ -85,6 +85,28 @@ app = FastAPI(title="Research Agent API", lifespan=lifespan)
 
 _settings = get_settings()
 
+# Tier 1 production auth gate (post-launch audit finding — see
+# docs/architecture.md decision log "Production auth: shared-secret gate +
+# fixed identity"). Fail fast at process startup, before serving any
+# traffic, rather than letting app/core/deps.py discover a missing value
+# per-request — same "must fail to start without it" posture already used
+# for database_url/openai_api_key in core/config.py.
+if _settings.is_production:
+    _missing_prod_vars = [
+        name
+        for name, value in (
+            ("APP_SHARED_SECRET", _settings.app_shared_secret),
+            ("PRODUCTION_USER_EMAIL", _settings.production_user_email),
+        )
+        if not value
+    ]
+    if _missing_prod_vars:
+        raise RuntimeError(
+            "Missing required production env var(s): "
+            f"{', '.join(_missing_prod_vars)} — app/core/deps.py's production "
+            "auth gate cannot serve any authenticated route without both."
+        )
+
 # Feature 6 (Frontend Research UI): the Next.js dev server runs on a
 # different origin than the backend, so the browser blocks fetch()/SSE
 # calls without CORS headers.
@@ -100,7 +122,7 @@ if _settings.is_production:
         allow_origins=_settings.cors_allowed_origins_list,
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Dev-User-Email"],
+        allow_headers=["Content-Type", "X-Dev-User-Email", "X-App-Secret"],
     )
 else:
     app.add_middleware(
@@ -108,7 +130,7 @@ else:
         allow_origin_regex=_DEV_CORS_ORIGIN_PATTERN,
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Dev-User-Email"],
+        allow_headers=["Content-Type", "X-Dev-User-Email", "X-App-Secret"],
     )
 
 

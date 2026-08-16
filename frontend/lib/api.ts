@@ -5,9 +5,13 @@
  * Guidelines).
  *
  * Security (docs/development_plan.md): never embed or expose backend
- * secrets/API keys here. Both env vars below are deliberately
- * NEXT_PUBLIC_* — a base URL and a dev-only placeholder email are not
- * secrets. No API key belongs in this file, ever.
+ * secrets/API keys here. All env vars below are deliberately
+ * NEXT_PUBLIC_* — a base URL, a dev-only placeholder email, and the
+ * shared-secret gate value are not secrets in the traditional
+ * confidentiality sense: NEXT_PUBLIC_* vars are always baked into the
+ * public JS bundle, visible to any visitor. See NEXT_PUBLIC_APP_SHARED_SECRET
+ * below for what that value actually protects against (and doesn't). No
+ * API key belongs in this file, ever.
  */
 
 import type { CreateResearchRunResponse } from "@/types/research";
@@ -19,10 +23,24 @@ export const API_BASE_URL =
 // header. Never a substitute for real auth — see that file's own warning.
 const DEV_USER_EMAIL = process.env.NEXT_PUBLIC_DEV_USER_EMAIL;
 
+// Tier 1 production auth gate (post-launch audit finding — see
+// docs/architecture.md decision log "Production auth: shared-secret gate +
+// fixed identity"). Matched against backend/app/core/deps.py's
+// settings.app_shared_secret via the X-App-Secret header. This does NOT
+// keep the value confidential — it ships in the public bundle like every
+// NEXT_PUBLIC_* var — it only proves a request came from someone who
+// loaded this frontend, blocking unauthenticated internet noise hitting
+// the bare API directly. It is unset (and harmless to omit) in local dev,
+// since the backend only checks it when settings.is_production is true.
+const APP_SHARED_SECRET = process.env.NEXT_PUBLIC_APP_SHARED_SECRET;
+
 /** Shared auth header(s) for every backend call — one place, not re-typed
  * per call site (same convention the backend uses for TTLs/config). */
-export function devAuthHeaders(): HeadersInit {
-  return DEV_USER_EMAIL ? { "X-Dev-User-Email": DEV_USER_EMAIL } : {};
+export function authHeaders(): HeadersInit {
+  return {
+    ...(DEV_USER_EMAIL ? { "X-Dev-User-Email": DEV_USER_EMAIL } : {}),
+    ...(APP_SHARED_SECRET ? { "X-App-Secret": APP_SHARED_SECRET } : {}),
+  };
 }
 
 export class ApiError extends Error {}
@@ -39,7 +57,7 @@ export async function createResearchRun(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...devAuthHeaders(),
+        ...authHeaders(),
       },
       body: JSON.stringify({ query }),
     });

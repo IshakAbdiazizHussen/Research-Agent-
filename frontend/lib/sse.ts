@@ -8,21 +8,22 @@
  * custom request headers, full stop — it's a browser API limitation, not
  * a configuration option. The backend's ownership check on the stream
  * endpoint (backend/app/api/routes/research.py) authenticates via the
- * X-Dev-User-Email header (backend/app/core/deps.py), so native
- * EventSource is not actually usable against this backend as it exists
- * today without either (a) adding a second, query-string-based auth path
- * to the backend, or (b) parsing the stream manually via fetch(), which
- * supports headers normally. (b) was chosen — it's a frontend-only
- * change, keeps the single existing auth mechanism, and needs no backend
- * changes beyond what Feature 6 already touches. Flagging this explicitly
- * rather than silently renaming away from what the doc says.
+ * X-Dev-User-Email header in development and the X-App-Secret header in
+ * production (backend/app/core/deps.py), so native EventSource is not
+ * actually usable against this backend as it exists today without either
+ * (a) adding a second, query-string-based auth path to the backend, or
+ * (b) parsing the stream manually via fetch(), which supports headers
+ * normally. (b) was chosen — it's a frontend-only change, keeps the
+ * single existing auth mechanism, and needs no backend changes beyond
+ * what Feature 6 already touches. Flagging this explicitly rather than
+ * silently renaming away from what the doc says.
  *
  * Every backend call goes through this file or lib/api.ts — no inline
  * fetch()/EventSource calls inside components (docs/development_plan.md
  * Guidelines).
  */
 
-import { devAuthHeaders, researchStreamUrl } from "./api";
+import { authHeaders, researchStreamUrl } from "./api";
 import type {
   DoneEventData,
   ProgressEventData,
@@ -90,7 +91,7 @@ async function consume(
   onEvent: (event: ResearchStreamEvent) => void
 ): Promise<void> {
   const response = await fetch(researchStreamUrl(runId), {
-    headers: devAuthHeaders(),
+    headers: authHeaders(),
     signal,
   });
 
