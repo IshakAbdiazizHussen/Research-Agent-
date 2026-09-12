@@ -29,8 +29,10 @@ export function MessageList({
 }: MessageListProps) {
   return (
     <div className="message-list">
+      {/* No "You asked" role label here (unlike the assistant/error
+          bubbles below, which keep theirs) — per a reference image, the
+          question bubble is just the question text on its own. */}
       <Card className="message message-user">
-        <p className="message-role">You asked</p>
         <p>{query}</p>
       </Card>
 

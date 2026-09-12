@@ -547,17 +547,25 @@ body {
   line-height: 1.5;
 }
 
-/* User bubble — right-aligned, filled with the same accent blue as the
-   primary Research button. */
+/* User bubble — right-aligned, filled with --color-accent (the app's one
+   accent color, orange — see that token's own comment for why it's no
+   longer blue). Fully rounded on all four corners now (was 18px 18px
+   4px 18px, a chat-bubble "tail" pointing at the now-removed "You asked"
+   label) — bigger, more generous padding and larger text, per a
+   reference image; no .message-role renders inside this bubble anymore
+   (MessageList.tsx), so there's nothing left needing that asymmetric
+   corner or a role-text color override. */
 .message-user {
   align-self: flex-end;
   background: var(--color-accent);
   border-color: var(--color-accent);
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 9999px;
+  padding: 1.1rem 1.85rem;
 }
 
-.message-user .message-role {
-  color: rgba(255, 255, 255, 0.78);
+.message-user p {
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 /* Answer bubble — left-aligned, a shade lighter than the page background
