@@ -565,7 +565,15 @@ body {
 
 .message-user p {
   font-size: 1.2rem;
-  font-weight: 600;
+  /* 400 ("normal"), not 600 — was reading as too bold. */
+  font-weight: 400;
+  /* Explicit white, not inherited — this was quietly relying on
+     --color-text happening to be light in dark mode, so the text
+     actually rendered dark navy on the orange bubble in light mode
+     (--color-text there is dark). The bubble is solid --color-accent in
+     both themes, so its text needs to be a fixed white in both too,
+     independent of the theme's own text color. */
+  color: #ffffff;
 }
 
 /* Answer bubble — left-aligned, a shade lighter than the page background
