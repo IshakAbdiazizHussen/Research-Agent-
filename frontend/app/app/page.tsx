@@ -21,7 +21,7 @@ const GENERIC_START_ERROR = "Could not start this research run. Please try again
 // no external setter exposed, so submitting directly is the smaller
 // change versus adding a controlled-value prop just for this.
 const SUGGESTED_QUERIES = [
-  "What are the EU AI Act compliance deadlines?",
+  "How many fighter jets did Somalia have in 1977?",
   "How does retrieval-augmented generation reduce hallucination?",
   "What is the state of solid-state battery production?",
 ];
