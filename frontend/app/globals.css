@@ -30,26 +30,29 @@
   --color-error-bg: #fdecee;
   --color-error-border: #f0b8bf;
   --color-error-text: #a4293a;
-  /* Landing page (app/page.tsx) — one continuous gradient spans hero +
-     "How it works" + "Key capabilities" (.landing-page), all the way to
-     the bottom of the page — no separate footer section below it
-     anymore. --card-glass-bg/-border and --badge-bg are the
-     frosted-glass card treatment "How it works"/"Key capabilities" cards
-     share, letting the gradient show through instead of sitting on an
-     opaque fill. --toggle-bg is the theme-toggle pill's translucent
-     fill. All theme-aware for the same reason everything else here is:
-     the toggle affects the ENTIRE app, landing page included. */
-  --hero-gradient: linear-gradient(135deg, #eef8ff 0%, #bcdff0 35%, #4fa3d6 70%, #1c7fbe 100%);
-  /* Was rgba(255,255,255,0.4) — that read as a near-opaque white card
-     floating on top of the blue gradient instead of a frosted tint of
-     it. Dropped to 0.16 (border 0.35, kept more visible than the fill
-     so cards still read as distinct panels) — same low-opacity
-     white-over-blue-gradient approach dark mode already used correctly
-     below (0.05/0.12); light mode just needs a bit more presence since
-     its gradient itself is lighter overall. */
-  --card-glass-bg: rgba(255, 255, 255, 0.16);
-  --card-glass-border: rgba(255, 255, 255, 0.35);
-  --badge-bg: rgba(255, 255, 255, 0.75);
+  /* Landing page (app/page.tsx) — redesigned against an exact reference
+     image: a single flat-background hero (no gradient, no "How it
+     works"/"Key capabilities" sections below it anymore). --landing-bg is
+     the page's own flat background, deliberately separate from
+     --color-bg (used everywhere else, including the chat interface) so
+     this redesign can match the reference's warm off-white exactly
+     without recoloring the rest of the app. --landing-heading/-subtext
+     are likewise separate from --color-text/--color-text-muted for the
+     same reason — the reference's near-black heading and mid-gray
+     subhead are close to but not identical to those shared tokens.
+     --landing-accent is the badge dot's and CTA button's color; it does
+     NOT vary between light/dark (a brand accent, not a surface tone), so
+     it's the one landing-* value repeated identically in all three
+     blocks below rather than actually changing. --toggle-bg is the
+     theme-toggle pill's translucent fill, shared with the chat header,
+     unaffected by this redesign. */
+  --landing-bg: #faf9f6;
+  --landing-heading: #171717;
+  --landing-subtext: #6b6b6b;
+  --landing-badge-bg: #ffffff;
+  --landing-badge-border: #e7e5e1;
+  --landing-accent: #c2683f;
+  --landing-accent-contrast: #ffffff;
   --toggle-bg: rgba(255, 255, 255, 0.55);
 }
 
@@ -65,10 +68,13 @@
     --color-error-bg: #2a1418;
     --color-error-border: #6b2530;
     --color-error-text: #f2a5ae;
-    --hero-gradient: linear-gradient(135deg, #0b0d12 0%, #0f1720 35%, #142a3d 70%, #1a3f5c 100%);
-    --card-glass-bg: rgba(255, 255, 255, 0.05);
-    --card-glass-border: rgba(255, 255, 255, 0.12);
-    --badge-bg: rgba(255, 255, 255, 0.12);
+    --landing-bg: #0b0d12;
+    --landing-heading: #e8e9ed;
+    --landing-subtext: #9a9fae;
+    --landing-badge-bg: rgba(255, 255, 255, 0.06);
+    --landing-badge-border: rgba(255, 255, 255, 0.14);
+    --landing-accent: #c2683f;
+    --landing-accent-contrast: #ffffff;
     --toggle-bg: rgba(255, 255, 255, 0.08);
   }
 }
@@ -84,10 +90,13 @@
   --color-error-bg: #2a1418;
   --color-error-border: #6b2530;
   --color-error-text: #f2a5ae;
-  --hero-gradient: linear-gradient(135deg, #0b0d12 0%, #0f1720 35%, #142a3d 70%, #1a3f5c 100%);
-  --card-glass-bg: rgba(255, 255, 255, 0.05);
-  --card-glass-border: rgba(255, 255, 255, 0.12);
-  --badge-bg: rgba(255, 255, 255, 0.12);
+  --landing-bg: #0b0d12;
+  --landing-heading: #e8e9ed;
+  --landing-subtext: #9a9fae;
+  --landing-badge-bg: rgba(255, 255, 255, 0.06);
+  --landing-badge-border: rgba(255, 255, 255, 0.14);
+  --landing-accent: #c2683f;
+  --landing-accent-contrast: #ffffff;
   --toggle-bg: rgba(255, 255, 255, 0.08);
 }
 
@@ -514,10 +523,10 @@ body {
    unifying on one always-fixed rule for the shared .theme-toggle-btn
    class is simpler and guarantees both routes match by construction
    rather than by two rules staying in sync.
-   Used both against a solid --color-surface/--color-bg-ish background
-   (chat header) and --hero-gradient (landing page), so it's translucent
-   + blurred ("frosted glass") rather than a flat fill, to read cleanly
-   against either. z-index:50 keeps it above chat message content as the
+   Used against a solid --color-surface/--color-bg-ish background on both
+   routes (chat header, and the landing page's own flat --landing-bg), so
+   it's translucent + blurred ("frosted glass") rather than a flat fill,
+   to read cleanly against either. z-index:50 keeps it above chat message content as the
    scroll area passes underneath it (nothing else in this codebase uses
    z-index, so there's no existing stacking value it needs to clear). */
 .theme-toggle-btn {
@@ -548,80 +557,76 @@ body {
   height: 1.15rem;
 }
 
-/* Landing page (app/page.tsx) — development_plan.md Feature 8, rebuilt
-   against an exact reference image (not the earlier from-description
-   pass): ONE continuous diagonal gradient spans the entire page —
-   hero, "How it works," and "Key capabilities" alike, all the way down
-   — not a hero-only gradient handing off to a flat section background.
-   .landing-page carries --hero-gradient; it sizes to the full rendered
-   content height by default (a plain CSS background, no
-   background-attachment:fixed), which is what stretches the same
-   near-white-to-deep-blue transition gradually across a page far taller
-   than one viewport, matching the reference's low-contrast, gradual
-   feel instead of a hero-height gradient that resets per section. */
+/* Landing page (app/page.tsx) — redesigned against an exact reference
+   image: a single flat-background hero, no gradient, no sections below
+   it (the earlier gradient hero + "How it works" + "Key capabilities"
+   layout is fully replaced, not extended). .landing-page carries
+   --landing-bg (a flat fill, not a gradient) and is the full viewport
+   height since the hero is now the entire page's content, not one
+   section among several. */
 .landing-page {
-  background: var(--hero-gradient);
-  /* Floor, not a forced height: on viewports taller than the page's own
-     content (confirmed via measurement — content renders ~1238px tall at
-     1440px width, so any viewport taller than that was affected), the
-     gradient background ended where the content ended and body's flat
-     --color-bg showed through below it as a visible gap. min-height here
-     just guarantees the gradient always covers at least one full
-     viewport; if content is taller, this has no effect and the page
-     grows normally. This is not the same bug as the .landing-hero
-     min-height:100vh removed above — that forced ONE inner section
-     among several to always be full-viewport tall regardless of its own
-     content, creating an internal gap. This is on the outermost page
-     wrapper, as a minimum, not a fixed height. */
+  background: var(--landing-bg);
   min-height: 100vh;
   min-height: 100dvh;
 }
 
 .landing-hero {
-  /* No min-height:100vh (removed — confirmed via measurement, not
-     assumption, to be the actual cause of a real bug: it forced the
-     hero to always fill the full viewport regardless of its own much
-     shorter content, e.g. exactly 900px tall at a 900px-tall viewport,
-     leaving ~275px of dead centered whitespace before "How it works").
-     Height now comes from content + padding alone, like any normal
-     section — proportionate at any viewport size instead of chasing
-     whatever height the browser window happens to be. */
+  /* min-height:100dvh is correct here, unlike the earlier layout's use
+     of it on this same class (removed then as a real bug): there, other
+     content (the "How it works"/"Key capabilities" sections) existed
+     below the hero, so forcing it to full-viewport height created dead
+     space above that content. Now the hero IS the entire page — the
+     same full-height centering is the actual desired behavior, not a
+     leftover bug. */
+  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  /* Bottom padding is the entire gap to "How it works" below (.landing-
-     sections has no top padding of its own) — 4rem read as too tight/
-     cramped against the CTA button, raised to 8rem. Still nowhere near
-     the removed min-height:100vh bug's ~275px of dead space (this is a
-     deliberate, proportionate gap driven by one padding value, not
-     empty space from a forced full-viewport box). */
-  padding: 6rem 1.5rem 8rem;
+  padding: 6rem 1.5rem;
+}
+
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 1.75rem;
+  padding: 0.4rem 0.95rem;
+  border-radius: 9999px;
+  background: var(--landing-badge-bg);
+  border: 1px solid var(--landing-badge-border);
+  color: var(--landing-subtext);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.landing-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--landing-accent);
+  flex-shrink: 0;
 }
 
 .landing-headline {
-  margin: 0 0 1.25rem;
-  /* Narrow enough that "Get a cited answer from the live web." wraps
-     after "live" at typical desktop widths, matching the reference's
-     exact 3-line break ("web." alone on its own line) — verified via
-     screenshot, not just estimated from the CSS alone. */
-  max-width: 860px;
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin: 0 0 1.5rem;
+  max-width: 780px;
+  font-size: clamp(2rem, 5vw, 3.25rem);
   font-weight: 800;
   line-height: 1.15;
-  color: var(--color-text);
+  color: var(--landing-heading);
 }
 
 .landing-subhead {
   margin: 0 0 2.25rem;
-  max-width: 640px;
-  font-size: clamp(1rem, 2vw, 1.15rem);
+  max-width: 620px;
+  font-size: clamp(1rem, 2vw, 1.1rem);
   font-weight: 400;
   line-height: 1.55;
-  color: var(--color-text);
-  opacity: 0.82;
+  color: var(--landing-subtext);
 }
 
 .landing-cta {
@@ -631,153 +636,17 @@ body {
   padding: 0.9rem 2.1rem;
   border: none;
   border-radius: 9999px;
-  background: var(--color-button-primary);
-  color: #ffffff;
+  background: var(--landing-accent);
+  color: var(--landing-accent-contrast);
   font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(11, 111, 172, 0.35);
+  box-shadow: 0 10px 25px rgba(194, 104, 63, 0.35);
 }
 
 .landing-cta:hover {
   filter: brightness(1.06);
-}
-
-.landing-sections {
-  padding: 0 1.5rem 5rem;
-}
-
-.landing-section-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-}
-
-/* "How it works" gets a wider container than "Key capabilities" (which
-   stays on the shared 1280px above, untouched) — its cards need more
-   room; see .landing-steps below. Placed after the base rule on purpose:
-   same specificity (one class each), so source order decides the tie —
-   this must come after .landing-section-inner to actually win. */
-.landing-steps-wide {
-  max-width: 1400px;
-}
-
-.landing-section-inner + .landing-section-inner {
-  margin-top: 5rem;
-}
-
-.landing-section-title {
-  margin: 0 0 2.5rem;
-  text-align: center;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-/* Frosted/translucent glass treatment — shared by "How it works" steps
-   and "Key capabilities" cards (the reference only shows the former in
-   full, but explicitly calls for the latter to match its visual
-   language). Lets the page-length gradient behind it show through
-   rather than sitting on an opaque fill, which is what makes it read as
-   "one page" rather than hero-then-a-different-section.
-
-   Grid behavior (auto-fit + minmax, safe against overflow at any width —
-   see the fixed-vs-fluid history below) is shared; the actual minmax
-   *range* is not — "How it works" needs more room than "Key
-   capabilities" (its titles, e.g. "Agent searches the live web," were
-   wrapping awkwardly at 280px), so each gets its own rule below instead
-   of one shared value. */
-.landing-steps,
-.landing-capabilities {
-  display: grid;
-  justify-content: center;
-  gap: 1.5rem;
-}
-
-/* Real fixed card width via minmax(), not a hard repeat(4, 280px) — that
-   was a genuine bug: a literal fixed size doesn't reflow at all, so it
-   silently overflowed the container/viewport at any width between the
-   ~767px mobile breakpoint and the width actually needed for four
-   columns, instead of scaling. auto-fit + minmax(min, max) gives every
-   card the same deliberate width (shrinking below max only if truly
-   needed) while letting the browser decide how many fit per row at the
-   *current* width and wrap the rest — continuous reflow, not a hard
-   breakpoint jump — which is also why there's no mobile-only override
-   anywhere below: this naturally collapses to one column on narrow
-   screens on its own. */
-.landing-capabilities {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 280px));
-}
-
-.landing-steps {
-  /* repeat(4, minmax(0, 1fr)) — deliberately NOT auto-fit here, unlike
-     .landing-capabilities above. Measured via Playwright (not assumed):
-     auto-fit + minmax(300px, 340px) actually rendered only 2 columns at
-     1440px, not 4 — its track-count algorithm doesn't behave the way a
-     min/max range suggests once the max is a fixed length, so it's the
-     wrong tool when "always exactly 4 columns" is a hard requirement.
-     repeat(4, ...) structurally cannot produce fewer than 4 tracks
-     wherever this rule applies; 1fr tracks always sum to exactly the
-     container's width, so this can never overflow either. Paired with
-     the wider .landing-steps-wide (1400px) container above, this gives
-     ~330px/card at 1440px — enough for "Agent searches the live web" /
-     "You get a grounded answer" to fit on one line at their existing,
-     unchanged font-size (verified by screenshot). Below 767px, the
-     mobile media query at the end of this file switches this to a
-     single stacked column — matching this project's one existing
-     breakpoint convention rather than adding a second one. */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.landing-step,
-.landing-capability-card {
-  padding: 1.75rem 1.5rem;
-  background: var(--card-glass-bg);
-  border: 1px solid var(--card-glass-border);
-  border-radius: 16px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 8px 24px rgba(15, 40, 61, 0.08);
-}
-
-.landing-step {
-  /* More internal breathing room than .landing-capability-card
-     (unchanged) — scoped to "How it works" only, per instruction.
-     Colors/background/border/radius/shadow above stay shared/untouched. */
-  padding: 2rem 1.75rem;
-  text-align: center;
-}
-
-.landing-step-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
-  background: var(--badge-bg);
-  color: var(--color-text);
-  font-weight: 700;
-}
-
-.landing-step-title,
-.landing-capability-title {
-  margin: 0 0 0.4rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.landing-step-desc,
-.landing-capability-desc {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-
-.landing-capability-title {
-  font-size: 1rem;
 }
 
 @media (max-width: 767px) {
@@ -802,17 +671,6 @@ body {
 
   .subtitle-short {
     display: inline;
-  }
-
-  /* .landing-capabilities needs no override here — its auto-fit +
-     minmax(240px, 280px) already collapses to one column on narrow
-     screens on its own. .landing-steps DOES need one: repeat(4, 1fr)
-     always produces exactly 4 tracks by construction (that's the whole
-     point of using it over auto-fit above), so without this override
-     it would render 4 very cramped columns on mobile instead of
-     stacking. */
-  .landing-steps {
-    grid-template-columns: 1fr;
   }
 
   /* Shared toggle (both routes) — smaller inset to match the tighter
