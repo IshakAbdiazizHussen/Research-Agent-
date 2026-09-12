@@ -665,11 +665,11 @@ body {
    Uses the same theme-aware --landing-* tokens as the hero (not new
    ones) so it adapts with light/dark mode the same way. */
 .landing-how {
-  /* Top padding raised (was 6rem, matching bottom) now that the hero
-     above no longer forces a full-viewport gap before this section —
-     this is now the only separation between the two, so it needs to be
-     deliberately generous rather than incidental. */
-  padding: 10rem 1.5rem 6rem;
+  /* Combined with .landing-hero's own 6rem bottom padding, this is the
+     entire visible gap between the two sections — tuned against an
+     exact reference screenshot (not guessed), reduced from an earlier
+     10rem that measured out wider than the reference actually showed. */
+  padding: 6rem 1.5rem 6rem;
 }
 
 .landing-how-inner {
