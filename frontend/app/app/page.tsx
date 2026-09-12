@@ -188,7 +188,6 @@ export default function ChatPage() {
               <Link href="/" className="chat-nav-back">
                 Back
               </Link>
-              <span className="chat-nav-divider" aria-hidden="true" />
               <h1 className="chat-nav-title">Research Agent</h1>
             </div>
             <div className="page-header-actions">
@@ -200,18 +199,6 @@ export default function ChatPage() {
               )}
             </div>
           </div>
-          <p className="page-subtitle">
-            {/* Two variants, CSS-switched by media query (not JS) — same
-             * approach as the rest of this file's responsive behavior,
-             * and avoids a hydration mismatch since both are always in
-             * the DOM, only visibility changes. */}
-            <span className="subtitle-long">
-              Ask a question — I&apos;ll search the live web and give you a cited answer.
-            </span>
-            <span className="subtitle-short">
-              Ask a question — get a cited, grounded answer.
-            </span>
-          </p>
 
           {history.length === 0 && !currentQuery && (
             <p className="empty-state">Ask a research question to get started.</p>

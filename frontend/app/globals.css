@@ -180,10 +180,12 @@ body {
   gap: 1rem;
 }
 
-/* Chat page nav (app/app/page.tsx) — "Back" pill + divider + title,
-   replacing the plain <h1> this header used before, per an exact
-   reference image. Left side of .page-header; .page-header-actions
-   (ThemeToggle + Clear chat) stays as the right side, unchanged. */
+/* Chat page nav (app/app/page.tsx) — "Back" pill + title, replacing the
+   plain <h1> this header used before, per an exact reference image (the
+   divider between them, and the subtitle line that used to sit below
+   this row, were both removed after the fact). Left side of
+   .page-header; .page-header-actions (ThemeToggle + Clear chat) stays as
+   the right side, unchanged. */
 .chat-nav {
   display: flex;
   align-items: center;
@@ -206,20 +208,16 @@ body {
   border-color: var(--color-text-muted);
 }
 
-.chat-nav-divider {
-  width: 1px;
-  height: 1.25rem;
-  background: var(--color-border);
-}
-
 /* Qualified with .chat-nav (not just .chat-nav-title alone) so this
    beats .page h1's margin-bottom:0.25rem above on specificity —
    (0,2,0) vs (0,1,1) — rather than losing to it via the cascade despite
-   coming later in the file. */
+   coming later in the file. font-weight:400 ("normal"), not 700 — this
+   was bold at first, per the reference image, then explicitly asked to
+   be normal weight instead. */
 .chat-nav .chat-nav-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--color-text);
 }
 
@@ -230,17 +228,6 @@ body {
 .btn-sm {
   padding: 0.4rem 0.85rem;
   font-size: 0.85rem;
-}
-
-.page-subtitle {
-  color: var(--color-text-muted);
-  margin-top: 0;
-  margin-bottom: 2rem;
-}
-
-/* Two subtitle variants — CSS-switched, see the media query below. */
-.subtitle-short {
-  display: none;
 }
 
 /* Centered in the middle of the chat scroll area, not just top-aligned
@@ -851,14 +838,6 @@ body {
 
   .chat-input-bar-inner {
     padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .subtitle-long {
-    display: none;
-  }
-
-  .subtitle-short {
-    display: inline;
   }
 
   /* Shared toggle (both routes) — smaller inset to match the tighter
