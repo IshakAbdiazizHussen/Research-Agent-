@@ -592,7 +592,7 @@ body {
      own midpoint upward, nudging the visually-centered group higher
      without abandoning centering altogether (per feedback: "center... but
      push it up a little", not flex-start/a fixed offset from the top). */
-  padding: 3rem 1.5rem 11rem;
+  padding: 1rem 1.5rem 13rem;
 }
 
 .landing-badge {
