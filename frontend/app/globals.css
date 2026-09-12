@@ -650,7 +650,6 @@ body {
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(194, 104, 63, 0.35);
 }
 
 .landing-cta:hover {
