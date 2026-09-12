@@ -571,11 +571,15 @@ body {
 }
 
 .landing-hero {
-  /* min-height:100dvh keeps this filling at least one full viewport (so
-     --landing-bg always covers the screen, no matter how short the
-     content is) — unrelated to the vertical-position fix below. */
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* No min-height:100vh/100dvh here (removed) — the exact same bug this
+     project already fixed once before on this same class, reintroduced
+     when a second section (.landing-how) was added below it: forcing
+     the hero to fill the whole viewport regardless of its own content
+     left a huge empty gap before "How it works" could even appear —
+     the "far away" gap reported. .landing-page above already guarantees
+     --landing-bg covers at least one full screen; the hero itself just
+     needs to size to its own content + padding, like any normal
+     section, so the next section starts right after it. */
   position: relative;
   display: flex;
   flex-direction: column;
@@ -661,7 +665,11 @@ body {
    Uses the same theme-aware --landing-* tokens as the hero (not new
    ones) so it adapts with light/dark mode the same way. */
 .landing-how {
-  padding: 6rem 1.5rem;
+  /* Top padding raised (was 6rem, matching bottom) now that the hero
+     above no longer forces a full-viewport gap before this section —
+     this is now the only separation between the two, so it needs to be
+     deliberately generous rather than incidental. */
+  padding: 10rem 1.5rem 6rem;
 }
 
 .landing-how-inner {
