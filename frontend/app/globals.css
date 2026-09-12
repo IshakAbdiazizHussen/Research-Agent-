@@ -26,7 +26,13 @@
   --color-text: #10283d;
   --color-text-muted: #5b7182;
   --color-accent: #2f6fd6;
-  --color-button-primary: #0b6fac;
+  /* Same orange as the landing page's --landing-accent (#c2683f) — kept
+     as this app's one other color token rather than reusing that name
+     directly, since this token already existed and is scoped to a
+     different route (the chat page, not app/page.tsx). Was blue
+     (#0b6fac), scoped to just this one button — --color-accent above
+     (user bubbles, links, the streaming-status dot) is untouched. */
+  --color-button-primary: #c2683f;
   --color-error-bg: #fdecee;
   --color-error-border: #f0b8bf;
   --color-error-text: #a4293a;
@@ -67,7 +73,7 @@
     --color-text: #e8e9ed;
     --color-text-muted: #9a9fae;
     --color-accent: #5b8def;
-    --color-button-primary: #3b82f6;
+    --color-button-primary: #c2683f;
     --color-error-bg: #2a1418;
     --color-error-border: #6b2530;
     --color-error-text: #f2a5ae;
@@ -92,7 +98,7 @@
   --color-text: #e8e9ed;
   --color-text-muted: #9a9fae;
   --color-accent: #5b8def;
-  --color-button-primary: #3b82f6;
+  --color-button-primary: #c2683f;
   --color-error-bg: #2a1418;
   --color-error-border: #6b2530;
   --color-error-text: #f2a5ae;
@@ -314,27 +320,36 @@ body {
 }
 
 .query-input button {
-  /* Never shrinks/wraps under horizontal pressure at narrow widths — the
-     input field (flex:1, and text inputs shrink gracefully) absorbs all
-     the compression instead, so "Research"/"Researching…" always stays
-     intact on one line. */
+  /* Circular icon button (was a pill with a text label) — per a
+     reference image. Fixed equal width/height + padding:0 so the arrow
+     icon sits centered in a true circle regardless of the input's own
+     height; flex-shrink:0 keeps it from ever being squeezed non-circular
+     under horizontal pressure at narrow widths. */
   flex-shrink: 0;
-  white-space: nowrap;
-  /* True pill shape, not just "rounder corners" — 9999px is always >=
-     half the button's own height regardless of its actual computed
-     height, so both ends render as perfect semicircles. Scoped to this
-     button specifically (not the shared .btn class) so a hypothetical
-     future .btn-secondary use elsewhere isn't pill-shaped by accident. */
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
   border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.query-input button svg {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .query-input input {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
   /* True pill shape — see .query-input button above for why 9999px
      rather than a fixed small value. */
   border-radius: 9999px;
-  border: 1px solid var(--color-border);
+  /* No border (was 1px solid var(--color-border)) — the reference shows
+     a borderless, flat-filled pill, distinguished from the page only by
+     its own background color. */
+  border: none;
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 1rem;
