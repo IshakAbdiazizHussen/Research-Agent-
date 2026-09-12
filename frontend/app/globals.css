@@ -236,15 +236,59 @@ body {
    above), then centers within it. Only rendered when there's zero
    history and no in-flight query (app/page.tsx) — disappears the instant
    a question is submitted. */
+/* Default empty-state hero (app/app/page.tsx) — heading + subhead +
+   clickable example-question chips, replacing the earlier one-line
+   placeholder, per an exact reference image. Now a column of stacked
+   children (was a single centered text node), so flex-direction:column
+   + gap replace the old single-child centering. */
 .empty-state {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1.5rem;
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: 1.1rem;
   text-align: center;
+}
+
+.empty-state-heading {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.empty-state-subhead {
+  margin: 0;
+  max-width: 480px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.empty-state-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 560px;
+}
+
+.empty-state-suggestion {
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.empty-state-suggestion:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
 }
 
 .chat-input-bar {

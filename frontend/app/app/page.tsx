@@ -14,6 +14,18 @@ import type { DoneEventData, MemoryResult, ProgressEventData } from "@/types/res
 
 const GENERIC_START_ERROR = "Could not start this research run. Please try again.";
 
+// Default empty-state hero (shown before the first query of a session) —
+// exact copy from a reference image. Clicking a suggestion submits it
+// directly through the same handleSubmit() the query form uses, rather
+// than just filling the input — QueryInput owns its own text state with
+// no external setter exposed, so submitting directly is the smaller
+// change versus adding a controlled-value prop just for this.
+const SUGGESTED_QUERIES = [
+  "What are the EU AI Act compliance deadlines?",
+  "How does retrieval-augmented generation reduce hallucination?",
+  "What is the state of solid-state battery production?",
+];
+
 /** The original query text of a related past run — metadata is
  * Record<string, unknown> (backend/app/memory/base.py's MemoryResult), so
  * this is read defensively rather than assumed. Falls back to the stored
@@ -201,7 +213,24 @@ export default function ChatPage() {
           </div>
 
           {history.length === 0 && !currentQuery && (
-            <p className="empty-state">Ask a research question to get started.</p>
+            <div className="empty-state">
+              <h2 className="empty-state-heading">What would you like researched?</h2>
+              <p className="empty-state-subhead">
+                Ask anything. The agent will search the live web and show its work as it goes.
+              </p>
+              <div className="empty-state-suggestions">
+                {SUGGESTED_QUERIES.map((query) => (
+                  <button
+                    key={query}
+                    type="button"
+                    className="empty-state-suggestion"
+                    onClick={() => handleSubmit(query)}
+                  >
+                    {query}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {history.map((exchange, index) => (
