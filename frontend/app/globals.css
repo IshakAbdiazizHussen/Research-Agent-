@@ -189,6 +189,13 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  /* Restores the gap the removed .page-subtitle used to provide
+     (margin-bottom: 2rem) between the header and the first message
+     below it — that spacing disappeared as a side effect when the
+     subtitle line was removed, leaving "Clear chat" sitting right on
+     top of the first message bubble. Same value, now owned here
+     directly instead of incidentally. */
+  margin-bottom: 2rem;
 }
 
 /* Chat page nav (app/app/page.tsx) — "Back" pill + title, replacing the
