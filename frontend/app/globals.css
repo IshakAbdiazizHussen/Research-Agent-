@@ -565,8 +565,9 @@ body {
 
 .message-user p {
   font-size: 1.2rem;
-  /* 400 ("normal"), not 600 — was reading as too bold. */
-  font-weight: 400;
+  /* 300 ("light") — 400 ("normal") still read as too bold/heavy against
+     the reference. */
+  font-weight: 300;
   /* Explicit white, not inherited — this was quietly relying on
      --color-text happening to be light in dark mode, so the text
      actually rendered dark navy on the orange bubble in light mode
