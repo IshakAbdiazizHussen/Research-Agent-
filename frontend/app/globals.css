@@ -656,6 +656,39 @@ body {
   filter: brightness(1.06);
 }
 
+/* Second section (app/page.tsx) — eyebrow + heading only, per an exact
+   reference image; left-aligned, unlike the centered hero above it.
+   Uses the same theme-aware --landing-* tokens as the hero (not new
+   ones) so it adapts with light/dark mode the same way. */
+.landing-how {
+  padding: 6rem 1.5rem;
+}
+
+.landing-how-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.landing-how-eyebrow {
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--landing-subtext);
+}
+
+.landing-how-heading {
+  margin: 0;
+  /* Wide enough to stay on one line at typical desktop widths, matching
+     the reference — the eyebrow above is the only thing narrower. */
+  max-width: 900px;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--landing-heading);
+}
+
 @media (max-width: 767px) {
   .page {
     /* Top padding bumped from 2rem to 2.75rem — a direct, necessary

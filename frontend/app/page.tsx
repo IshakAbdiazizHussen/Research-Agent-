@@ -43,6 +43,15 @@ export default function LandingPage() {
           Try it now
         </Link>
       </section>
+
+      <section className="landing-how">
+        <div className="landing-how-inner">
+          <p className="landing-how-eyebrow">How it works</p>
+          <h2 className="landing-how-heading">
+            Four steps run on every question. You watch them happen.
+          </h2>
+        </div>
+      </section>
     </div>
   );
 }
