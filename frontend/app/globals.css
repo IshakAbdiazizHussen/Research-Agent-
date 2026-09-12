@@ -586,7 +586,13 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 6rem 1.5rem;
+  /* Asymmetric top/bottom (was 6rem/6rem) — justify-content:center centers
+     content within the box's content area, i.e. AFTER padding is
+     subtracted, so less top padding than bottom shifts that content area's
+     own midpoint upward, nudging the visually-centered group higher
+     without abandoning centering altogether (per feedback: "center... but
+     push it up a little", not flex-start/a fixed offset from the top). */
+  padding: 3rem 1.5rem 11rem;
 }
 
 .landing-badge {
