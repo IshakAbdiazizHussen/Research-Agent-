@@ -754,6 +754,46 @@ body {
   color: var(--landing-subtext);
 }
 
+/* "Capabilities" section under "How it works" — exact layout from a
+   reference image: flat columns divided by a thin top border, not cards
+   (unlike .landing-step above). Reuses --landing-card-border for the
+   divider and --landing-heading/--landing-subtext for text — no new
+   theme tokens needed. */
+.landing-capabilities {
+  padding: 0 1.5rem 8rem;
+}
+
+.landing-capabilities-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.landing-capabilities-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.landing-capability {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--landing-card-border);
+}
+
+.landing-capability-title {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--landing-heading);
+}
+
+.landing-capability-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--landing-subtext);
+}
+
 @media (max-width: 767px) {
   .page {
     /* Top padding bumped from 2rem to 2.75rem — a direct, necessary
@@ -788,7 +828,8 @@ body {
   /* repeat(4, 1fr) always produces exactly 4 tracks by construction —
      without this override it would render 4 cramped columns on mobile
      instead of stacking. */
-  .landing-steps {
+  .landing-steps,
+  .landing-capabilities-grid {
     grid-template-columns: 1fr;
   }
 }

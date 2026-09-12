@@ -37,6 +37,28 @@ const STEPS = [
   },
 ];
 
+// "Capabilities" section under "How it works" — exact copy from a later
+// reference image.
+const CAPABILITIES = [
+  {
+    title: "Live web search",
+    description: "Queries run at ask time, so answers reflect what is published today, not a training cutoff.",
+  },
+  {
+    title: "Grounded, cited answers",
+    description: "Every claim carries a numbered citation you can open and read yourself.",
+  },
+  {
+    title: "Related past research",
+    description:
+      "When a new question resembles one you have already asked, the earlier thread surfaces alongside it.",
+  },
+  {
+    title: "Streaming progress",
+    description: "Each retrieval, grade and retry appears as it runs. Nothing happens behind a spinner.",
+  },
+];
+
 export default function LandingPage() {
   return (
     <div className="landing-page">
@@ -80,6 +102,23 @@ export default function LandingPage() {
                 <div className="landing-step-number">{index + 1}</div>
                 <h3 className="landing-step-title">{step.title}</h3>
                 <p className="landing-step-desc">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-capabilities">
+        <div className="landing-capabilities-inner">
+          {/* Same eyebrow style as "How it works" above — reused directly
+              rather than duplicated, since the two are visually identical. */}
+          <p className="landing-how-eyebrow">Capabilities</p>
+
+          <div className="landing-capabilities-grid">
+            {CAPABILITIES.map((capability) => (
+              <div className="landing-capability" key={capability.title}>
+                <h3 className="landing-capability-title">{capability.title}</h3>
+                <p className="landing-capability-desc">{capability.description}</p>
               </div>
             ))}
           </div>
