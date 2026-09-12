@@ -571,28 +571,30 @@ body {
 }
 
 .landing-hero {
-  /* min-height:100dvh is correct here, unlike the earlier layout's use
-     of it on this same class (removed then as a real bug): there, other
-     content (the "How it works"/"Key capabilities" sections) existed
-     below the hero, so forcing it to full-viewport height created dead
-     space above that content. Now the hero IS the entire page — the
-     same full-height centering is the actual desired behavior, not a
-     leftover bug. */
+  /* min-height:100dvh keeps this filling at least one full viewport (so
+     --landing-bg always covers the screen, no matter how short the
+     content is) — unrelated to the vertical-position fix below. */
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* flex-start + a fixed padding-top, NOT justify-content:center (removed
+     — this is a direct fix for a real, measured problem, not a style
+     preference). Centering computed the content's position relative to
+     the FULL box height, so the same padding tweak produced a barely
+     perceptible shift on a tall browser window and a large one on a
+     short window — confirmed via a screenshot showing the gap above the
+     content still large despite repeated padding-top reductions, because
+     that gap scales with window height under centering, not with the
+     padding value itself. flex-start removes that dependency entirely:
+     the gap between the top of the viewport and the badge is now
+     exactly padding-top, always, regardless of window height — the
+     direct, 1:1, predictable control this needed. */
+  justify-content: flex-start;
   text-align: center;
-  /* Asymmetric top/bottom (was 6rem/6rem) — justify-content:center centers
-     content within the box's content area, i.e. AFTER padding is
-     subtracted, so less top padding than bottom shifts that content area's
-     own midpoint upward, nudging the visually-centered group higher
-     without abandoning centering altogether (per feedback: "center... but
-     push it up a little", not flex-start/a fixed offset from the top). */
-  padding: 1rem 1.5rem 13rem;
+  padding: 4rem 1.5rem 6rem;
 }
 
 .landing-badge {
