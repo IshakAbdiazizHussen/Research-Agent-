@@ -559,7 +559,9 @@ body {
   align-self: flex-end;
   background: var(--color-accent);
   border-color: var(--color-accent);
-  border-radius: 9999px;
+  /* Moderately rounded rectangle (was 9999px, a full pill) — per a
+     follow-up reference image showing visibly less rounding than that. */
+  border-radius: 20px;
   padding: 1.1rem 1.85rem;
 }
 
