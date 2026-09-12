@@ -594,7 +594,7 @@ body {
      direct, 1:1, predictable control this needed. */
   justify-content: flex-start;
   text-align: center;
-  padding: 4rem 1.5rem 6rem;
+  padding: 8rem 1.5rem 6rem;
 }
 
 .landing-badge {
