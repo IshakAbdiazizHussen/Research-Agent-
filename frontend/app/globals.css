@@ -180,6 +180,49 @@ body {
   gap: 1rem;
 }
 
+/* Chat page nav (app/app/page.tsx) — "Back" pill + divider + title,
+   replacing the plain <h1> this header used before, per an exact
+   reference image. Left side of .page-header; .page-header-actions
+   (ThemeToggle + Clear chat) stays as the right side, unchanged. */
+.chat-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.chat-nav-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.95rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.chat-nav-back:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.chat-nav-divider {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--color-border);
+}
+
+/* Qualified with .chat-nav (not just .chat-nav-title alone) so this
+   beats .page h1's margin-bottom:0.25rem above on specificity —
+   (0,2,0) vs (0,1,1) — rather than losing to it via the cascade despite
+   coming later in the file. */
+.chat-nav .chat-nav-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 .page h1 {
   margin-bottom: 0.25rem;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { QueryInput } from "@/components/chat/QueryInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { Card } from "@/components/ui/Card";
@@ -175,7 +176,21 @@ export default function ChatPage() {
       <div className="chat-scroll">
         <main className="page">
           <div className="page-header">
-            <h1>Research Agent</h1>
+            {/* "Back" returns to the landing page (app/page.tsx) — the
+                exact nav shape from a reference image, replacing the
+                plain <h1> this page used before. ThemeToggle is
+                unaffected by moving here: .theme-toggle-btn is always
+                position:fixed to the viewport (globals.css), so its
+                rendered position doesn't depend on where in the DOM
+                it's placed — already identical to the landing page's,
+                confirmed visually, not just assumed from the CSS. */}
+            <div className="chat-nav">
+              <Link href="/" className="chat-nav-back">
+                Back
+              </Link>
+              <span className="chat-nav-divider" aria-hidden="true" />
+              <h1 className="chat-nav-title">Research Agent</h1>
+            </div>
             <div className="page-header-actions">
               <ThemeToggle />
               {history.length > 0 && (
