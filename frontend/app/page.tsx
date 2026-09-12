@@ -14,6 +14,29 @@ export const metadata: Metadata = {
 // works"/"Key capabilities" sections below it) — replaces the earlier
 // gradient hero + sections layout entirely, per instruction to match the
 // reference exactly rather than add to what existed before.
+
+// The four step cards under "How it works" — exact copy from a later
+// reference image, matching the graph's actual node names (agent/graph.py)
+// rather than the earlier removed section's more descriptive phrasing.
+const STEPS = [
+  {
+    title: "Retrieve",
+    description: "Searches the live web for pages that could answer the question.",
+  },
+  {
+    title: "Grade",
+    description: "Scores each source for relevance and drops the ones that miss.",
+  },
+  {
+    title: "Retry",
+    description: "If too little survives grading, it rewrites the query and searches again.",
+  },
+  {
+    title: "Synthesize",
+    description: "Writes the answer from the graded sources, with a citation per claim.",
+  },
+];
+
 export default function LandingPage() {
   return (
     <div className="landing-page">
@@ -50,6 +73,16 @@ export default function LandingPage() {
           <h2 className="landing-how-heading">
             Four steps run on every question. You watch them happen.
           </h2>
+
+          <div className="landing-steps">
+            {STEPS.map((step, index) => (
+              <div className="landing-step" key={step.title}>
+                <div className="landing-step-number">{index + 1}</div>
+                <h3 className="landing-step-title">{step.title}</h3>
+                <p className="landing-step-desc">{step.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

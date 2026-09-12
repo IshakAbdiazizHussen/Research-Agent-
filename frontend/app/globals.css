@@ -53,6 +53,9 @@
   --landing-badge-border: #e7e5e1;
   --landing-accent: #c2683f;
   --landing-accent-contrast: #ffffff;
+  --landing-card-bg: #ffffff;
+  --landing-card-border: #e7e5e1;
+  --landing-card-number-bg: rgba(0, 0, 0, 0.04);
   --toggle-bg: rgba(255, 255, 255, 0.55);
 }
 
@@ -75,6 +78,9 @@
     --landing-badge-border: rgba(255, 255, 255, 0.14);
     --landing-accent: #c2683f;
     --landing-accent-contrast: #ffffff;
+    --landing-card-bg: #17181d;
+    --landing-card-border: rgba(255, 255, 255, 0.08);
+    --landing-card-number-bg: rgba(255, 255, 255, 0.06);
     --toggle-bg: rgba(255, 255, 255, 0.08);
   }
 }
@@ -97,6 +103,9 @@
   --landing-badge-border: rgba(255, 255, 255, 0.14);
   --landing-accent: #c2683f;
   --landing-accent-contrast: #ffffff;
+  --landing-card-bg: #17181d;
+  --landing-card-border: rgba(255, 255, 255, 0.08);
+  --landing-card-number-bg: rgba(255, 255, 255, 0.06);
   --toggle-bg: rgba(255, 255, 255, 0.08);
 }
 
@@ -700,6 +709,51 @@ body {
   color: var(--landing-heading);
 }
 
+/* Four step cards under the heading above — exact copy/layout from a
+   reference image. Solid cards (--landing-card-bg), not the frosted-
+   glass treatment the pre-redesign "How it works" section used — this
+   reference shows a plain, slightly-lighter-than-page-background fill. */
+.landing-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.landing-step {
+  padding: 1.75rem 1.5rem;
+  background: var(--landing-card-bg);
+  border: 1px solid var(--landing-card-border);
+  border-radius: 16px;
+}
+
+.landing-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 50%;
+  background: var(--landing-card-number-bg);
+  color: var(--landing-accent);
+  font-weight: 700;
+}
+
+.landing-step-title {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--landing-heading);
+}
+
+.landing-step-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--landing-subtext);
+}
+
 @media (max-width: 767px) {
   .page {
     /* Top padding bumped from 2rem to 2.75rem — a direct, necessary
@@ -729,5 +783,12 @@ body {
   .theme-toggle-btn {
     top: 1rem;
     right: 1rem;
+  }
+
+  /* repeat(4, 1fr) always produces exactly 4 tracks by construction —
+     without this override it would render 4 cramped columns on mobile
+     instead of stacking. */
+  .landing-steps {
+    grid-template-columns: 1fr;
   }
 }
